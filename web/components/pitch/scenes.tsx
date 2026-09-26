@@ -17,10 +17,10 @@ export function useLoop(steps: number[], ref: React.RefObject<Element | null>) {
   return i;
 }
 
-// ---- The problem: a first-come drop sells out to bots, then reappears at 10x. ----
+// ---- The problem: a first-come drop sells out to bots, then reappears at 5x. ----
 const SLOTS = 12;
 const HUMANS = new Set([3, 9]); // the two fans who got through
-const RESALE = [28000, 31500, 36000, 29800, 42000, 33000, 30500, 38800, 27500, 35000, 32000, 40000];
+const RESALE = [14000, 15800, 18000, 14900, 21000, 16500, 15200, 19400, 13800, 17500, 16000, 20000];
 const SELLOUT_STEPS = [900, 1800, 1600, 3800];
 
 export function Sellout() {
@@ -62,7 +62,7 @@ export function Sellout() {
         <AnimatePresence mode="wait">
           {step >= 2 && (
             <motion.p key={step} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className={step === 3 ? "text-bad" : "text-ink-2"}>
-              {step === 2 ? "10 of 12 units went to bots. 2 fans got through." : "An hour later, on Mercari: 10x the price."}
+              {step === 2 ? "10 of 12 units went to bots. 2 fans got through." : "An hour later, on Mercari: 5x the price."}
             </motion.p>
           )}
         </AnimatePresence>
@@ -84,7 +84,7 @@ export function Gap() {
         <span className={`px-3 py-1.5 transition-colors ${fair ? "bg-accent/20 text-accent" : "text-ink-3"}`}>Fanfare</span>
       </div>
       <div className="flex h-24 w-full">
-        <div className="flex basis-[12%] flex-col justify-center bg-fan/80 px-2 text-accent-ink">
+        <div className="flex basis-[20%] flex-col justify-center bg-fan/80 px-2 text-accent-ink">
           <span className="font-mono text-[11px] font-semibold">retail</span>
           <span className="font-display text-lg">¥3k</span>
         </div>
@@ -95,7 +95,7 @@ export function Gap() {
               {fair ? <Storefront size={32} weight="bold" /> : <Robot size={32} weight="bold" />}
               <div>
                 <div className="font-display text-2xl uppercase">{fair ? "To the brand" : "To the scalper"}</div>
-                <div className="font-mono text-xs">the gap, up to ¥27,000 a unit</div>
+                <div className="font-mono text-xs">the gap, up to ¥12,000 a unit</div>
               </div>
             </motion.div>
           </AnimatePresence>
@@ -103,7 +103,7 @@ export function Gap() {
       </div>
       <div className="mt-2 flex justify-between font-mono text-[11px] text-ink-3">
         <span>¥0</span>
-        <span>retail price (定価) ¥3,000 · what fans will actually pay ≈ ¥30,000</span>
+        <span>retail price (定価) ¥3,000 · what fans will actually pay ≈ ¥15,000</span>
       </div>
     </div>
   );

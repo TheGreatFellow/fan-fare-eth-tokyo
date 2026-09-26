@@ -5,7 +5,7 @@ ETHGlobal Tokyo 2026 hackathon project. Solo builder, 36 hours.
 
 ## 1. Problem
 
-Japan sells a lot of limited-edition / special-edition merch (anime goods, artist goods, trading cards, collabs). Makers deliberately price it low and allocate by first-come-first-served (先着) or lottery (抽選). It sells out instantly, then trades on Mercari at 10–20x. The markup goes to resellers (転売ヤー), not the maker, and bots/multi-accounts hoard stock.
+Japan sells a lot of limited-edition / special-edition merch (anime goods, artist goods, trading cards, collabs). Makers deliberately price it low and allocate by first-come-first-served (先着) or lottery (抽選). It sells out instantly, then trades on Mercari at around 5x. The markup goes to resellers (転売ヤー), not the maker, and bots/multi-accounts hoard stock.
 
 ## 2. Solution (one line)
 
@@ -308,7 +308,7 @@ fans reacted to real ticketing auctions and dynamic pricing.
 ## 9. Demo script (4 min + 3 min Q&A)
 
 For the demo, deploy with a small `flatUnits` (e.g. 2–3) so the curve kicks in live.
-1. Problem in 20s: limited merch → sells out → Mercari at 10–20x.
+1. Problem in 20s: limited merch → sells out → Mercari at 5x.
 2. Judges verify with World ID and place sealed bids; nobody can see the amounts.
 3. Same judge tries to bid again → **rejected** (World's required alternative path).
 4. Admin closes bidding → judges reveal → settle: fan units raffled at 定価, the rest clear at one
@@ -326,7 +326,7 @@ Fallback if the auction isn't ready: the Phase 1 curve demo (fan price → deman
 
 ## 11. Q&A prep
 - **"Isn't this Unisocks?"** Unisocks (Uniswap, 2019) proved curve pricing for merch but was open to everyone from the first unit, so it became a speculative asset (500 socks, only 185 ever redeemed). We keep a fixed fan price for the first units, add one-per-human, and position it as an anti-scalper tool for real fans.
-- **"Isn't dynamic pricing hated?"** (Coca-Cola's 1999 temperature-based vending pricing, reportedly tested in Japan, caused backlash.) Early fans pay the normal fixed price; only demand beyond that pays more — and today the alternative is paying a scalper 10–20x.
+- **"Isn't dynamic pricing hated?"** (Coca-Cola's 1999 temperature-based vending pricing, reportedly tested in Japan, caused backlash.) Early fans pay the normal fixed price; only demand beyond that pays more — and today the alternative is paying a scalper 5x.
 - **"Can't early buyers still resell on Mercari?"** Yes — physical resale can't be prevented by any system. We remove bot hoarding (one per human), cap the markup (curve is the best place to buy), and give sellers a better exit than Mercari.
 - **"How do physical returns work?"** Returned items are inspected by the maker before restocking; in production, an NFC authenticity tag makes the check instant.
 

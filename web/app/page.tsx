@@ -17,7 +17,7 @@ export default function Home() {
         {/* Problem */}
         <Section>
           <div className="grid items-center gap-12 md:grid-cols-2">
-            <TitleCard kanji="問題" title="Sold out in 30 seconds. Resold at 10x by lunch.">
+            <TitleCard kanji="問題" title="Sold out in 30 seconds. Resold at 5x by lunch.">
               Brands price limited editions low on purpose: the retail price (定価) is how fan culture says thank you. But when ten times more people want a figure than there are figures, first come, first served turns into a race, and bots are faster than people.
             </TitleCard>
             <Reveal delay={0.1}>
@@ -130,7 +130,7 @@ export default function Home() {
           <TitleCard kanji="転売" title="So what's left for a scalper?" />
           <Reveal className="mt-12">
             <div className="grid gap-px overflow-hidden border border-line bg-line md:grid-cols-3">
-              <Resale tone="bad" label="Today" buy="¥3,000, the retail price (定価)" sell="≈ ¥30,000 on Mercari" margin="¥27,000" note="margin per unit, times every bot account" />
+              <Resale tone="bad" label="Today" buy="¥3,000, the retail price (定価)" sell="≈ ¥15,000 on Mercari" margin="¥12,000" note="margin per unit, times every bot account" />
               <Resale label="Auction unit" buy="¥6,000, the clearing price" sell="Everyone who'd pay more already won one" margin="≈ ¥0" note="margin: the price already is the market price" />
               <Resale tone="good" label="Fan unit" buy="¥3,000, by raffle" sell="One per human, drawn blind" margin="1 flip" note="at most, by one lucky fan. Bots can't farm the raffle." />
             </div>
@@ -154,7 +154,7 @@ export default function Home() {
         <Section>
           <TitleCard kanji="用途" title="For anything that sells out." />
           <div className="mt-12 grid auto-rows-[minmax(11rem,auto)] gap-3 md:grid-cols-4">
-            <UseCase big kanji="模型" title="Anime figures and collabs" text="Evangelion and Gundam anniversary figures, Gunpla exclusives, studio collabs: the drops that vanish in seconds and reappear at 10x." />
+            <UseCase big kanji="模型" title="Anime figures and collabs" text="Evangelion and Gundam anniversary figures, Gunpla exclusives, studio collabs: the drops that vanish in seconds and reappear at 5x." />
             <UseCase kanji="限定" title="Designer toys" text="BE@RBRICK collabs and numbered art toys." />
             <UseCase kanji="靴" title="Sneakers" text="Limited colourways without the bot queue." />
             <UseCase kanji="券" title="Live tickets" text="Front rows priced by fans, not resale sites." />

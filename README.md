@@ -15,7 +15,7 @@ ETHGlobal Tokyo 2026 · built solo · Sepolia · World ID 4.0
 
 Japan sells a lot of limited-edition merch — anime goods, artist goods, trading cards, collabs.
 Makers price it low on purpose and allocate first-come-first-served (先着) or by lottery (抽選).
-It sells out in seconds, then resells at 10–20× the price. The markup goes to resellers (転売ヤー),
+It sells out in seconds, then resells at around 5× the price. The markup goes to resellers (転売ヤー),
 not the maker, and bots and multi-account buyers hoard the stock.
 
 ## How it works
