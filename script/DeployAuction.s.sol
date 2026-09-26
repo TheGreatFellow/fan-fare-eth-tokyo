@@ -35,7 +35,7 @@ contract DeployAuction is Script {
             supply: vm.envOr("AUCTION_SUPPLY", uint256(3)),
             fanUnits: vm.envOr("AUCTION_FAN_UNITS", uint256(1)),
             reservePrice: vm.envOr("AUCTION_RESERVE", uint256(0.0002 ether)),
-            minRevealTime: vm.envOr("AUCTION_MIN_REVEAL_SECONDS", uint256(120))
+            minRevealTime: vm.envOr("AUCTION_MIN_REVEAL_SECONDS", uint256(30))
         });
 
         uint160 flags = uint160(

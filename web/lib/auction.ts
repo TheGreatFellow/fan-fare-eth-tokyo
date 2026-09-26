@@ -1,9 +1,9 @@
 // Generated from out/AuctionDrop.sol and deployments/sepolia-auction.json. Do not edit by hand.
 // Regenerate after a redeploy: `npm run gen:drop` in web/.
 
-export const AUCTION_ADDRESS = "0x0b7C565B45A8009B97991F08c49b20CE371Fa888" as const;
+export const AUCTION_ADDRESS = "0xB3Eb8115a0E780234b48DEd2FD0811ef79DDE888" as const;
 export const AUCTION_ID = "0xae45b150fa5f1c0b052ea3a0783ac27b3059da609942cac8b9e95a9d81762dfc" as const;
-export const AUCTION_DEPLOY_BLOCK = 11782556n;
+export const AUCTION_DEPLOY_BLOCK = 11785815n;
 export const UNIVERSAL_ROUTER = "0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b" as const;
 export const POOL_FEE = 0;
 export const TICK_SPACING = 1;

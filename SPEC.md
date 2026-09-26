@@ -226,8 +226,9 @@ One sealed-bid round for a drop of N units, of which X are fan units.
    hackathon).
 2. **Close bidding** — from the admin console, not a timer, so the demo controls the pace. Closing
    early gives the maker no edge: bids are sealed.
-3. **Reveal.** Bidders open their bids. The reveal phase stays open a **minimum time** (default 2
-   minutes) before the admin may settle, so bidders can't be cut off.
+3. **Reveal.** Bidders open their bids. The reveal phase stays open a **minimum time** (default 30
+   seconds, cut from 2 minutes on 2026-09-26 to fit a live demo) before the admin may settle, so
+   bidders can't be cut off.
 4. **Settle.**
    - **Fan raffle first:** X units at 定価, drawn at random among revealed bids ≥ 定価.
    - **Then the auction:** the remaining N − X units go to the highest remaining bids. Every winner
