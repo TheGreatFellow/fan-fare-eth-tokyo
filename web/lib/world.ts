@@ -106,10 +106,10 @@ export async function verifyProof(result: IDKitResult, buyer: Address): Promise<
 
   // Since 2026-09-25 World refuses staging proofs unless the app's team opened a 24h staging window
   // (portal MCP tool set_world_id_staging_verification) and the call carries the token it issued.
-  // Staging only: sandbox proofs go to the same endpoint with no token, and production never
-  // carries one, which keeps simulator identities out of a production drop.
+  // Sandbox proofs pass the same gate (World verifies them against the staging verifier), so every
+  // non-production call carries it. Production never does, which keeps test identities out.
   const headers: Record<string, string> = { "content-type": "application/json" };
-  if (environment === "staging" && process.env.WORLD_STAGING_TOKEN) {
+  if (environment !== "production" && process.env.WORLD_STAGING_TOKEN) {
     headers["x-staging-verification-token"] = process.env.WORLD_STAGING_TOKEN;
   }
 

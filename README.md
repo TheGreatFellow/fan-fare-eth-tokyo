@@ -101,7 +101,8 @@ forge test
 cd web && ln -s ../.env .env && npm install && npm test && npm run dev
 ```
 
-World ID runs in `sandbox` (the World ID Sandbox app).
+World ID runs in `sandbox` (the World ID Sandbox app). Sandbox proofs need World's 24h staging
+window and its token: `node web/scripts/open-staging-window.mjs` fills `WORLD_STAGING_TOKEN`.
 
 `ALLOW_UNVERIFIED_TEST_BUYS=true` adds a test switch that issues vouchers without World ID. It's
 for exercising multi-bidder flows alone, and it is never available with

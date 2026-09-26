@@ -95,7 +95,7 @@ test("valid proof: returns World's nullifier and calls our RP with only World's 
   ]);
 });
 
-test("only staging calls carry the staging-window token; sandbox and production never do", async () => {
+test("staging and sandbox calls carry the staging-window token; production never does", async () => {
   const saved = { token: process.env.WORLD_STAGING_TOKEN, env: process.env.WORLD_ENVIRONMENT };
   process.env.WORLD_STAGING_TOKEN = "stg_test_token";
   try {
@@ -109,7 +109,7 @@ test("only staging calls carry the staging-window token; sandbox and production 
       });
       await verifyProof({ ...proofFor(BUYER), environment }, BUYER);
       const headers = (fetchMock.mock.calls[0].arguments[1] as RequestInit).headers as Record<string, string>;
-      assert.equal(headers["x-staging-verification-token"], environment === "staging" ? "stg_test_token" : undefined);
+      assert.equal(headers["x-staging-verification-token"], environment === "production" ? undefined : "stg_test_token");
       mock.restoreAll();
     }
   } finally {
