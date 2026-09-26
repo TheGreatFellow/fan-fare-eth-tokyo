@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <!-- The site's cut-corner plate. -->
+    <clipPath id="plate"><path d="M0 0H24L32 8V32H0Z"/></clipPath>
+    <pattern id="hazard" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">
+      <rect width="2" height="4" fill="#ff5b1f"/>
+    </pattern>
+    <linearGradient id="f" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff7a45"/>
+      <stop offset="1" stop-color="#ff5b1f"/>
+    </linearGradient>
+  </defs>
+  <g clip-path="url(#plate)">
+    <rect width="32" height="32" fill="#0b0b0e"/>
+    <rect y="27" width="32" height="5" fill="url(#hazard)" opacity=".6"/>
+    <!-- F for Fanfare. -->
+    <path d="M8 5h16v5.5H14v3.5h8.5v5.5H14V27H8z" fill="url(#f)"/>
+    <!-- Orange edge on the cut corner; the clip keeps half of the stroke. -->
+    <path d="M24 0L32 8" stroke="#ff5b1f" stroke-width="3"/>
+  </g>
+</svg>
