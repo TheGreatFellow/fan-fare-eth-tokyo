@@ -67,6 +67,10 @@ wallet ─ execute() ─▶ Universal Router ─ V4_SWAP ─▶ PoolManager ─ 
 
 ## World ID
 
+**Trust moment:** placing a bid. `proof_of_human` is the minimum sufficient credential: the attacker
+is a bot or one person with many wallets, and only Orb-backed uniqueness stops one person bidding
+many times.
+
 IDKit 4.3 / World ID 4.0, `proof_of_human`, verified server-side on World's v4 endpoint
 ([`web/lib/world.ts`](web/lib/world.ts)):
 - the proof's signal must be the bidder's wallet;
@@ -74,8 +78,7 @@ IDKit 4.3 / World ID 4.0, `proof_of_human`, verified server-side on World's v4 e
 - nullifiers are compared as numbers.
 
 The backend then signs a voucher carrying the person's nullifier, and the hook records it. One bid
-per human is therefore enforced on-chain. Integration notes for World are in
-[`docs/world-debrief.md`](docs/world-debrief.md).
+per human is therefore enforced on-chain. Integration debrief: [`docs/world-debrief.md`](docs/world-debrief.md).
 
 ## Repo
 
