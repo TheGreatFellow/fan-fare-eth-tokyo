@@ -47,7 +47,22 @@ export default function AdminPage() {
         ) : !wallet.isConnected || !isMaker ? (
           <Gate connected={wallet.isConnected} maker={a.maker} />
         ) : (
-          <Console a={a} now={now} busy={busy} onAction={(fn, label) => void send(label, (w) => w({ ...auction, functionName: fn, chainId: sepolia.id, account: wallet.address }))} />
+          <Console
+            a={a}
+            now={now}
+            busy={busy}
+            onAction={(fn, label) =>
+              void send(label, async (w) => {
+                // settle's gas depends on the fan raffle's random draw, which differs between the
+                // estimate and the real block; without headroom it can run out of gas.
+                const gas =
+                  fn === "settle"
+                    ? (await a.client!.estimateContractGas({ ...auction, functionName: fn, account: wallet.address })) * 2n
+                    : undefined;
+                return w({ ...auction, functionName: fn, chainId: sepolia.id, account: wallet.address, gas });
+              })
+            }
+          />
         )}
       </main>
       <AlertModal alert={alert} onClose={() => setAlert(null)} />
