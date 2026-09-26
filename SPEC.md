@@ -321,7 +321,7 @@ Fallback if the auction isn't ready: the Phase 1 curve demo (fan price → deman
 ## 10. ETHGlobal rules to respect
 - Start from scratch (Classic track). No prior project code.
 - **Commit early and often.** Large single commits may be disqualified.
-- **AI attribution:** document where AI tools were used; include spec files, prompts and planning artifacts (this file counts). Keep prompts/notes in `docs/ai/`.
+- **AI attribution:** document where AI tools were used; include spec files and planning artifacts (this file counts). Summary in `docs/AI.md`.
 - Up to 3 partner prizes.
 
 ## 11. Q&A prep

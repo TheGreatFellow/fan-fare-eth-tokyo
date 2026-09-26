@@ -27,4 +27,4 @@ Never start a phase before the previous one works end-to-end. Tell me if we're b
 - Never commit private keys or secrets; use `.env` (gitignored) and provide `.env.example`.
 - Suggest a git commit after each working step (ETHGlobal disqualifies big single commits).
 - For third-party SDKs (IDKit, ENSv2, Uniswap API), check current docs instead of relying on memory; they changed recently.
-- Log notable prompts and decisions in `docs/ai/` for ETHGlobal's AI-attribution requirement.
+- Keep the short AI-usage summary in `docs/AI.md` current (ETHGlobal's AI-attribution requirement); no detailed prompt logs.

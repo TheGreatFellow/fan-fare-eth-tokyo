@@ -2,176 +2,111 @@
 
 *fan·fare, n. 2. the fair fare for fans.*
 
-**Limited-edition merch at the normal price for early fans. After that, demand sets the price —
-and the markup goes to the maker, not to scalpers.**
+**Scalper-proof drops for physical merch, run as a sealed-bid auction inside a Uniswap v4 hook, with
+one bid per human via World ID.**
 
-ETHGlobal Tokyo 2026 · built solo · Sepolia · World ID 4.0
+ETHGlobal Tokyo 2026 · solo build · Sepolia
 
-- **Live demo:** [fanfare-drop.vercel.app](https://fanfare-drop.vercel.app) — World ID in sandbox: verify with the [World ID (Sandbox) app](https://docs.world.org/world-id/sandbox/sandbox-access)
-- **Contract:** [`0x897d36a3…eb9d3` on Sepolia](https://sepolia.etherscan.io/address/0x897d36a3d028776c3cdfc2e5a468544fdd1eb9d3#code) (verified)
-- **World ID integration debrief:** [`docs/world-debrief.md`](docs/world-debrief.md)
+- **Live:** [fanfare-drop.vercel.app](https://fanfare-drop.vercel.app): pitch page, [drop](https://fanfare-drop.vercel.app/auction), [brand console](https://fanfare-drop.vercel.app/admin)
+- **Hook:** [`AuctionDrop` at `0xB3Eb…E888`](https://sepolia.etherscan.io/address/0xB3Eb8115a0E780234b48DEd2FD0811ef79DDE888)
 
 ## The problem
 
-Japan sells a lot of limited-edition merch — anime goods, artist goods, trading cards, collabs.
-Makers price it low on purpose and allocate first-come-first-served (先着) or by lottery (抽選).
-It sells out in seconds, then resells at around 5× the price. The markup goes to resellers (転売ヤー),
-not the maker, and bots and multi-account buyers hoard the stock.
+Limited anime goods, designer toys and collabs sell at the retail price (定価) and sell out in
+seconds, mostly to bots and multi-account buyers. Then they resell at 5–10x. The gap between retail
+and what fans will really pay goes to scalpers, not to the brand or the fans.
 
-## How it works
+## Fan-First Vickrey
 
-1. **One per human.** Buying needs a World ID proof. The same person can never buy twice from a
-   drop — not with a second wallet, and not after selling their unit back.
-2. **Fan price first.** The first units all sell at the normal fixed price (定価), the price fans
-   expect.
-3. **Then demand pricing.** Every sale after that raises the price along a published curve, steeply
-   at the end. While units remain, buying from the curve is the cheapest way to get one.
-4. **Sell back any time.** Holders can return a unit for the current price minus a 5% spread. The
-   unit is burned and the price drops for the next buyer.
+1. **One sealed bid per human.** World ID proof of human is required to bid, so bots can't enter.
+   Each bid is a hidden commitment backed by a deposit of at least the bid.
+2. **Fans first.** Some units are raffled at retail among everyone who bid at least retail. Bid size
+   doesn't change your raffle odds.
+3. **One price for the rest.** The remaining units go to the highest bids, and every winner pays the
+   highest losing bid. This is the multi-unit Vickrey (second-price) auction: your bid decides
+   *whether* you win, never *what* you pay.
+   - Bidding low only costs you units you'd have paid for.
+   - Overbidding risks paying a runner-up's inflated bid.
+   - Bidding your true value is the best strategy. That holds because World ID gives every bidder
+     exactly one unit of demand.
 
-We don't ban resale; we outcompete it.
+Fans still get retail units, the brand earns the gap, and a scalper who wins has already paid the
+market price. Winners receive an on-chain receipt that the brand redeems by shipping the item.
 
-## Why World ID
+## Built on Uniswap v4
 
-The attacker here is a scalper running many accounts. "One unit per real person" is exactly the
-constraint that stops them, and it has to be a *unique human*, not a wallet, email or phone number.
-
-We require **`proof_of_human`** (Orb-backed): the minimum assurance that actually stops one person
-from being many buyers. A device-based credential would let the same scalper buy once per phone.
-The backend enforces the credential rather than trusting what the widget asked for.
-
-**The trust moment:** the buyer proves they're a unique human, bound to the wallet they're paying
-from. Our backend verifies the proof with World server-side and signs an EIP-712 voucher carrying
-the person's nullifier. The contract then records that nullifier itself and refuses it forever — so
-one-per-person holds onchain even if the backend were bypassed.
-
-## Architecture
+The whole auction is a v4 hook ([`src/AuctionDrop.sol`](src/AuctionDrop.sol)), built on
+OpenZeppelin `uniswap-hooks` `BaseAsyncSwap`. **A sealed bid is a swap.**
 
 ```
- Browser (Next.js + wagmi)                Backend (Next.js route handlers)             Sepolia
- ─────────────────────────                ────────────────────────────────             ───────
- IDKit widget ──── POST /api/rp-context ──▶ sign the proof request (RP key)
-      │
-      │ proof ──── POST /api/verify ──────▶ • proof bound to this buyer's wallet?
-      │                                     • verify with World (v4 endpoint)
-      │                                     • environment + credential pinned
-      │                                     • nullifier already used onchain? ──────▶ Drop.nullifierUsed
-      │           ◀── EIP-712 voucher ───── • sign voucher (verifier key)
-      │
- wallet ── buy(voucher) ─────────────────────────────────────────────────────────▶ Drop.sol
-                                                                                   • check voucher signer
-                                                                                   • record nullifier
-                                                                                   • mint unit, sold++
+wallet ─ execute() ─▶ Universal Router ─ V4_SWAP ─▶ PoolManager ─ beforeSwap ─▶ AuctionDrop hook
+                       SWAP_EXACT_IN_SINGLE                          • verify World ID voucher (EIP-712, hookData)
+                       + SETTLE_ALL                                  • store the sealed commitment
+                                                                     • keep the whole input as ERC-6909 claims
+                                                                     • return a delta that nets the swap to zero
 ```
 
-| Part | Where |
+- **Permissions:** `beforeInitialize` (binds the hook to one pool, opened by the brand),
+  `beforeAddLiquidity` (outside liquidity blocked), `beforeSwap` + `beforeSwapReturnsDelta` (async
+  bids; ordinary swaps rejected).
+- **Mined address:** `HookMiner` + CREATE2 gives an address whose low bits encode those flags.
+- **Settlement:** claims and brand withdrawals burn ERC-6909 claims and `take` ETH inside
+  `unlockCallback`, so deposits never leave the PoolManager until someone is paid.
+- **Pool pair:** ETH against the hook contract itself. The second currency is never paid out, so
+  the router needs no `TAKE` step.
+- **No custom bid contract:** the web app sends a stock Universal Router transaction
+  ([`web/lib/bid.ts`](web/lib/bid.ts)). Any client that can build a v4 swap can bid.
+- **Real bidder:** the router is the swap sender, so the voucher is bound to `tx.origin`.
+
+| | Sepolia |
 |---|---|
-| Contract: pricing, buy, sell-back, withdraw, redeem | [`src/Drop.sol`](src/Drop.sol) |
-| Contract tests, including the invariant fuzz | [`test/Drop.t.sol`](test/Drop.t.sol) |
-| World ID verification | [`web/lib/world.ts`](web/lib/world.ts) |
-| Voucher signing + onchain check | [`web/lib/voucher.ts`](web/lib/voucher.ts) |
-| API routes | [`web/app/api/`](web/app/api) |
-| Drop page and price chart | [`web/app/page.tsx`](web/app/page.tsx), [`web/app/price-chart.tsx`](web/app/price-chart.tsx) |
+| AuctionDrop hook | `0xB3Eb8115a0E780234b48DEd2FD0811ef79DDE888` |
+| PoolManager | `0xE03A1074c86CFeDd5C142C4F04F1a1536e203543` |
+| Universal Router | `0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b` |
+| Drop (Phase 1 curve drop) | `0x897d36a3d028776c3cdfc2e5a468544fdd1eb9d3` |
 
-## Guarantees, and how they're tested
+## World ID
 
-The sell-back is the risky part: could a wave of sell-backs leave the contract unable to pay, or the
-maker out of pocket? No — and the tests prove it rather than assert it.
+IDKit 4.3 / World ID 4.0, `proof_of_human`, verified server-side on World's v4 endpoint
+([`web/lib/world.ts`](web/lib/world.ts)):
+- the proof's signal must be the bidder's wallet;
+- the environment and credential are pinned;
+- nullifiers are compared as numbers.
 
-- **Solvency.** After any sequence of buys, sell-backs and maker withdrawals, the contract holds at
-  least what it would cost to buy back every outstanding unit. While the sale is open the maker can
-  only withdraw what sits above that.
-- **The maker never loses.** Each position on the curve is always bought for more than it is later
-  bought back for, so every buy-then-sell-back leaves the maker the spread. Maker cash is always at
-  least `units still sold × base price`.
-- **One purchase per person, ever**, per drop — selling back doesn't free you to buy again.
+The backend then signs a voucher carrying the person's nullifier, and the hook records it. One bid
+per human is therefore enforced on-chain. Integration notes for World are in
+[`docs/world-debrief.md`](docs/world-debrief.md).
 
-`forge test` runs 34 contract tests, including SPEC §6.4's worked example checked row by row, a
-cascade where every holder sells back and is paid in full, and a fuzz test that interleaves random
-buys, sell-backs and withdrawals and checks both invariants after **every** step.
+## Repo
 
-`npm test` in `web/` runs 20 backend tests. The important ones run against the real deployed
-contract: the backend's voucher hash equals the contract's own `hashVoucher()`, and on a fork of
-Sepolia a backend-signed voucher buys a unit while a second voucher for the same person is refused.
+| Path | What |
+|---|---|
+| `src/AuctionDrop.sol` | The v4 hook: bidding, reveal, raffle, clearing, claims |
+| `src/Drop.sol` | Phase 1: retail-then-curve drop with sell-back (live at `/curve`) |
+| `test/` | Foundry tests, incl. a solvency fuzz and a fork test through the real Universal Router |
+| `script/` | Deploy scripts (hook address mining, pool init) |
+| `web/` | Next.js app: pitch page, drop page, brand console, World ID + voucher API |
 
-## World ID integration
-
-IDKit 4.3, World ID 4.0, server-side verification through `POST /api/v4/verify/{rp_id}`. Checks
-beyond "World said yes", each closing a specific hole:
-
-- the proof's signal must be the buyer's wallet, so a proof can't be replayed for another wallet;
-- the environment is pinned in both request and response, because staging and sandbox identities
-  are test identities and must never pass in production;
-- the required credential is enforced;
-- the RP ID comes from server config, never the client;
-- nullifiers are compared as numbers, so `0x04e5` and `0x4e5` can't count as two people.
-
-What we hit along the way — eleven friction points, from a contradictory `rp_context` shape across
-doc pages to the simulator only ever being one v4 person — plus time to first success and the one
-improvement we'd most like, are in **[`docs/world-debrief.md`](docs/world-debrief.md)**.
-
-## Run it locally
+## Run locally
 
 Needs Foundry and Node 22.
 
 ```bash
-git clone --recurse-submodules <this repo> && cd <repo>
-cp .env.example .env        # fill in: RPC URL, keys, World app/RP IDs and signing key
-forge test                  # contract tests
-
-cd web
-ln -s ../.env .env          # the web app shares the root .env
-npm install
-npm test                    # backend tests
-npm run dev                 # http://localhost:3000
+git clone --recurse-submodules <repo> && cd <repo>
+cp .env.example .env         # RPC URL, keys, World app/RP IDs, signing key
+forge test
+cd web && ln -s ../.env .env && npm install && npm test && npm run dev
 ```
 
-World ID runs in `sandbox` for development and the demo: verify with the World ID (Sandbox) app
-([setup](https://docs.world.org/world-id/sandbox/sandbox-access)). Proofs go to the same production
-verify endpoint. `staging` (the web simulator) still works, but needs a 24h staging window token
-(`node web/scripts/open-staging-window.mjs`).
+World ID runs in `sandbox` (the World ID Sandbox app).
 
-**Test mode.** Setting `ALLOW_UNVERIFIED_TEST_BUYS=true` shows a switch to turn World ID off, so
-one wallet can buy repeatedly and exercise the curve and sell-back. It removes the one-per-person
-rule, so it only exists when explicitly enabled and never when `WORLD_ENVIRONMENT=production`.
+`ALLOW_UNVERIFIED_TEST_BUYS=true` adds a test switch that issues vouchers without World ID. It's
+for exercising multi-bidder flows alone, and it is never available with
+`WORLD_ENVIRONMENT=production`.
 
-To deploy your own drop: `forge script script/Deploy.s.sol --rpc-url $SEPOLIA_RPC_URL --broadcast`,
-then update `deployments/sepolia.json` and run `npm run gen:drop` in `web/`.
+## Notes
 
-## Known limitations
-
-- **Sandbox, not the simulator.** The staging simulator only ever returned one v4 person (debrief
-  item 11) and then hit a bug, so the demo moved to World's sandbox environment.
-- **Some smart-account wallets can't receive units.** `buy()` mints with `_safeMint`; an EIP-7702
-  smart account whose code doesn't accept ERC-721s makes the purchase revert.
-- **Yen at demo scale.** Sepolia prices are tiny, so the page shows yen at a fixed, labelled scale
-  (0.0002 ETH = ¥3,000).
-
-## Name
-
-Formerly *Fair Drop*. On-chain identifiers that are already deployed or registered with World keep
-the old name: drop IDs such as `fair-drop/auction-1`, the World action `fair-drop-demo-1`, and the
-contracts' token names.
-
-## AI attribution
-
-Built with Claude Code. The product spec, working agreement and every notable prompt and decision
-are in the repo, as ETHGlobal requires: [`SPEC.md`](SPEC.md), [`CLAUDE.md`](CLAUDE.md) and
-[`docs/ai/`](docs/ai).
-
-## Credits
-
-Studied for patterns and pitfalls; no code was copied.
-
-- [`worldcoin/idkit`](https://github.com/worldcoin/idkit) Next.js example — the shape of the RP
-  signing and verify routes.
-- [Phora](https://ethglobal.com/showcase/phora-zj0cz) (ETHGlobal New York 2026) — raised the open
-  question of whether World ID 4.0 nullifiers are deterministic, which we then tested.
-- [Void Tactics](https://ethglobal.com/showcase/void-tactics-cont-ag25f) (ETHGlobal New York 2026) —
-  confirmed that current Portal actions only work on the v4 endpoint.
-- [hackpass](https://ethglobal.com/showcase/hackpass-2ghhd) (ETHOnline 2026) — the `rp_context`
-  snake_case gotcha.
-- [`worldcoin/simulator`](https://github.com/worldcoin/simulator) source — explained why staging is
-  one v4 person.
-- [Unisocks](https://github.com/Uniswap/unisocks) — proved curve pricing for merch in 2019. Fanfare
-  differs with a fixed fan price first and one unit per person.
+- **Raffle randomness:** `prevrandao`.
+- **Prices:** yen is shown at a fixed demo scale (0.0002 ETH = ¥3,000).
+- **Former name:** *Fair Drop*. IDs that are already deployed (drop IDs, the World action) keep it.
+- **AI usage:** see [`docs/AI.md`](docs/AI.md).
