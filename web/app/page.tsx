@@ -57,10 +57,10 @@ export default function Home() {
 
         {/* Vickrey, the building block */}
         <Section id="vickrey" className="md:!py-16">
-          <TitleCard compact kanji="入札" title="First, the auction that rewards honesty.">
+          <TitleCard kanji="入札" title="Start with Vickrey.">
             In a Vickrey auction (sealed, second-price) the highest bid wins, but the winner pays the <em>second</em>-highest bid. It won William Vickrey the 1996 Nobel prize in economics.
           </TitleCard>
-          <div className="mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          <div className="mt-10 grid items-start gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
             <Reveal>
               <VickreyDemo />
             </Reveal>
@@ -74,9 +74,9 @@ export default function Home() {
         <Section className="text-center">
           <Reveal>
             <div className="hud !text-accent">The mechanism</div>
-            <h2 className="mx-auto mt-4 max-w-[14ch] font-display text-[clamp(3rem,9vw,7rem)] uppercase leading-[0.9] tracking-wide">Proof-of-Fan Clearing</h2>
+            <h2 className="mx-auto mt-4 max-w-[14ch] font-display text-[clamp(3rem,9vw,7rem)] uppercase leading-[0.9] tracking-wide">Fan-First Vickrey</h2>
             <p className="mt-5 font-mono text-lg text-ink-2">One human. One sealed bid. One fair price.</p>
-            <p className="mx-auto mt-4 max-w-[52ch] text-ink-2">Vickrey&apos;s second-price rule, scaled up to a whole drop, with fans raffled in first.</p>
+            <p className="mx-auto mt-4 max-w-[52ch] text-balance text-ink-2">Vickrey&apos;s second-price rule, scaled up to a whole drop, with fans raffled in first.</p>
           </Reveal>
           <div className="mx-auto mt-16 grid max-w-5xl gap-px bg-line text-left md:grid-cols-3">
             {[

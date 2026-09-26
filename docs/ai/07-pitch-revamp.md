@@ -11,8 +11,10 @@ limited anime merch (Evangelion, Gundam, BE@RBRICK collabs).
 
 ## Decisions
 
-- **Name:** "Proof-of-Fan Clearing". "Proof-of-" reads as web3, "clearing" is the market term for a
-  uniform-price auction, and it's still descriptive.
+- **Name:** "Proof-of-Fan Clearing" at first; renamed **Fan-First Vickrey** on 2026-09-27, the
+  builder's pick from a shortlist, so the name points back to the Vickrey primer before it.
+  The first name's reasoning: "Proof-of-" reads as web3, and "clearing" is the market term for a
+  uniform-price auction.
 - **Theme:** one dark theme, mecha command-deck look: orange warning accent, 定価 green, hazard
   stripes for sealed bids, Anton for display, Noto Serif JP for title-card kanji. No franchise art or
   logos; the product card is an original foil "限定" plate.
