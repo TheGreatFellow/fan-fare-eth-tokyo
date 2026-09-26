@@ -1,38 +1,188 @@
 @import "tailwindcss";
 
-/* Tokens from the dataviz reference palette (validated: series-1 passes all six checks). */
+/* One committed dark theme: a mecha-anime command-deck look (orange warning accent, hazard
+   stripes, Japanese title-card type). Colour jobs: --accent = auction / action, --fan = 定価 fan
+   units, --human = World ID, --bad = errors. Text never wears a series colour. */
 :root {
-  color-scheme: light;
-  --page: #f9f9f7;
-  --surface-1: #fcfcfb;
-  --text-primary: #0b0b0b;
-  --text-secondary: #52514e;
-  --muted: #898781;
-  --grid: #e1e0d9;
-  --axis: #c3c2b7;
-  --border: rgba(11, 11, 11, 0.1);
-  --series-1: #2a78d6;
-  --good: #006300;
-  --bad: #b3261e;
+  color-scheme: dark;
+  --bg: #0b0b0e;
+  --panel: #131318;
+  --panel-2: #1a1a21;
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.18);
+  --ink: #f1eee8;
+  --ink-2: #aeaaa2;
+  --ink-3: #75726c;
+  --accent: #ff5b1f;
+  --accent-ink: #1a0a03;
+  --fan: #8fe34f;
+  --human: #9d7bff;
+  --bad: #ff4d5e;
+
+  /* Old names, still used by the curve drop page. */
+  --page: var(--bg);
+  --surface-1: var(--panel);
+  --text-primary: var(--ink);
+  --text-secondary: var(--ink-2);
+  --muted: var(--ink-3);
+  --grid: #2a2a31;
+  --axis: #3a3a42;
+  --border: var(--line);
+  --series-1: var(--accent);
+  --good: var(--fan);
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --page: #0d0d0d;
-    --surface-1: #1a1a19;
-    --text-primary: #ffffff;
-    --text-secondary: #c3c2b7;
-    --grid: #2c2c2a;
-    --axis: #383835;
-    --border: rgba(255, 255, 255, 0.1);
-    --series-1: #3987e5;
-    --good: #0ca30c;
-    --bad: #ff8a80;
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-fan: var(--fan);
+  --color-human: var(--human);
+  --color-bad: var(--bad);
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-anton), "Arial Narrow", sans-serif;
+  --font-jp: var(--font-noto-serif-jp), "Hiragino Mincho ProN", serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* Film grain on a fixed, non-scrolling layer (cheap to composite). */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@layer components {
+  .hud {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+  }
+  /* Cut corner: the one shape motif. Everything else is 4px. */
+  .notch {
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+    border-radius: 4px;
+    padding: 0.8rem 1.25rem;
+    font-weight: 600;
+    transition:
+      transform 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+      background-color 0.2s,
+      opacity 0.2s;
+  }
+  .btn:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  .btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: #ff7240;
+  }
+  .btn-ghost {
+    border: 1px solid var(--line-strong);
+    color: var(--ink);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.05);
+  }
+  .field {
+    width: 100%;
+    border-radius: 4px;
+    border: 1px solid var(--line-strong);
+    background: var(--bg);
+    padding: 0.65rem 0.8rem;
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    color: var(--ink);
+    outline: none;
+  }
+  .field:focus {
+    border-color: var(--accent);
+  }
+  .field::placeholder {
+    color: var(--ink-3);
+  }
+  /* A sealed bid: moving warning stripes. transform-only, so it stays on the compositor. */
+  .hazard {
+    position: relative;
+    overflow: hidden;
+    background: #16120e;
+  }
+  .hazard::before {
+    content: "";
+    position: absolute;
+    inset: 0 -40px 0 -40px;
+    background: repeating-linear-gradient(-45deg, rgba(255, 91, 31, 0.22) 0 10px, transparent 10px 20px);
+    animation: hazard 1.6s linear infinite;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
   }
 }
 
-body {
-  background: var(--page);
-  color: var(--text-primary);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+@keyframes hazard {
+  to {
+    transform: translateX(28.28px);
+  }
+}
+@keyframes blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+.blink {
+  animation: blink 1.2s steps(2, jump-none) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .hazard::before,
+  .blink {
+    animation: none;
+  }
 }

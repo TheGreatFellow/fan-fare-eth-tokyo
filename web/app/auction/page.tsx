@@ -1,200 +1,104 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { IDKitRequestWidget, proofOfHuman, type IDKitResult, type RpContext } from "@worldcoin/idkit";
-import { BaseError, ContractFunctionRevertedError, formatEther, type Address, type Hex } from "viem";
-import {
-  useConnect,
-  useConnection,
-  useConnectors,
-  useDisconnect,
-  usePublicClient,
-  useReadContracts,
-  useSwitchChain,
-  useWriteContract,
-} from "wagmi";
+import type { Hex } from "viem";
 import { sepolia } from "wagmi/chains";
-import { AUCTION_ADDRESS, AUCTION_DEPLOY_BLOCK, UNIVERSAL_ROUTER, auctionAbi } from "@/lib/auction";
+import { AnimatePresence, motion } from "motion/react";
+import { ArrowRight, Eye, EyeSlash, LockSimple, Package, ShieldCheck, Trophy } from "@phosphor-icons/react";
+import { AUCTION_ADDRESS, AUCTION_DEPLOY_BLOCK, UNIVERSAL_ROUTER } from "@/lib/auction";
 import { bidCall, commitmentOf, randomSecret, universalRouterAbi } from "@/lib/bid";
-
-// Same demo scale as the curve drop: the reserve (定価) reads as ¥3,000.
-const YEN_FOR_RESERVE = 3000;
+import {
+  OUTCOME,
+  YEN_FOR_RESERVE,
+  auction,
+  loadSaved,
+  same,
+  short,
+  storeSaved,
+  useActingWallet,
+  useAuction,
+  useNow,
+  useSend,
+  yen,
+  type Row,
+} from "@/lib/use-auction";
+import { SiteNav, WalletBar } from "@/components/chrome";
+import { AlertModal, type Alert } from "@/components/modal";
+import { DropCard } from "@/components/drop-card";
+import { PhaseTrack } from "@/components/phase-track";
 
 const APP_ID = process.env.NEXT_PUBLIC_WORLD_APP_ID as `app_${string}`;
 const ACTION = process.env.NEXT_PUBLIC_WORLD_ACTION as string;
 const ENVIRONMENT = process.env.NEXT_PUBLIC_WORLD_ENVIRONMENT as "production" | "staging";
 const TEST_BUYS = process.env.NEXT_PUBLIC_TEST_BUYS === "true";
 
-const auction = { address: AUCTION_ADDRESS, abi: auctionAbi } as const;
-const PHASES = ["Bidding", "Reveal", "Settled"] as const;
-const OUTCOME = { none: 0, fan: 1, auction: 2 } as const;
+type Signed = { voucher: { dropId: Hex; buyer: Hex; nullifierHash: string; deadline: string }; signature: Hex };
 
-type Signed = {
-  voucher: { dropId: Hex; buyer: Hex; nullifierHash: string; deadline: string };
-  signature: Hex;
-};
-type Notice = { tone: "good" | "bad" | "info"; text: string } | null;
-type Row = { bidder: Address; deposit: bigint; amount: bigint; revealed: boolean; claimed: boolean; outcome: number };
-
-const REJECTIONS: Record<string, string> = {
-  already_purchased: "Already bid — one bid per person. This World ID has already bid in this auction.",
-  max_verifications_reached: "Already bid — one bid per person. This World ID has already been used here.",
-  nullifier_replayed: "That verification was already used. Please verify again.",
-  signal_mismatch: "That verification was made for a different wallet. Verify again with this wallet connected.",
-  wrong_credential: "This drop needs an Orb-verified World ID.",
-  rp_signature_expired: "The verification request expired. Please try again.",
-  environment_not_allowed: "World ID test verification is closed for this app right now. The site owner needs to reopen it.",
+// Backend and World error codes, in words a bidder understands.
+const REJECTIONS: Record<string, { title: string; text: string }> = {
+  already_purchased: { title: "Already bid", text: "One bid per person. This World ID has already placed a bid in this drop." },
+  max_verifications_reached: { title: "Already bid", text: "One bid per person. This World ID has already been used in this drop." },
+  nullifier_replayed: { title: "Proof already used", text: "That verification was already used. Please verify again." },
+  signal_mismatch: { title: "Wrong wallet", text: "That proof was made for a different wallet. Verify again with this wallet selected." },
+  wrong_credential: { title: "Orb verification needed", text: "This drop needs an Orb-verified World ID." },
+  rp_signature_expired: { title: "Request expired", text: "The verification request timed out. Please try again." },
+  environment_not_allowed: { title: "Verification closed", text: "World ID test verification is closed for this app right now. The site owner needs to reopen it." },
 };
 
-const yen = (n: number) => `¥${Math.round(n).toLocaleString("ja-JP")}`;
-const eth = (wei: bigint) => `${Number(formatEther(wei)).toPrecision(3)} ETH`;
-const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
-
-// The secret that opens a sealed bid lives only in this browser (SPEC §8.2: lose it, lose the bid).
-const savedKey = (who: string) => `fair-drop:bid:${AUCTION_ADDRESS}:${who.toLowerCase()}`;
-function loadSaved(who: string): { amount: string; secret: Hex } | null {
-  try {
-    return JSON.parse(localStorage.getItem(savedKey(who)) ?? "null");
-  } catch {
-    return null;
-  }
-}
-
-function txMessage(e: unknown): string {
-  if (e instanceof BaseError) {
-    const revert = e.walk((x) => x instanceof ContractFunctionRevertedError);
-    if (revert instanceof ContractFunctionRevertedError) {
-      switch (revert.data?.errorName) {
-        case "BadReveal":
-          return "That bid doesn't match your sealed commitment.";
-        case "RevealTooShort":
-          return "The reveal window is still open. Wait for the countdown.";
-        case "WrongPhase":
-          return "The auction has moved to a different phase. Refreshing.";
-        default:
-          return `Transaction failed: ${revert.data?.errorName ?? revert.shortMessage}`;
-      }
-    }
-    if (/reject|denied|cancel/i.test(e.shortMessage)) return "Cancelled in your wallet.";
-    return e.shortMessage;
-  }
-  return e instanceof Error ? e.message : String(e);
-}
+const PRESETS = [3000, 6000, 10000, 15000];
 
 export default function AuctionPage() {
-  const { address: selected, addresses, chainId, isConnected, connector } = useConnection();
-  // Demo convenience: with several accounts connected, pick which one acts. Every write passes it
-  // as `account`, so the wallet signs as that account without switching in the extension.
-  const [picked, setPicked] = useState<Address | null>(null);
-  const address = picked && addresses?.some((a) => a.toLowerCase() === picked.toLowerCase()) ? picked : selected;
-  const connectors = useConnectors();
-  const connect = useConnect();
-  const disconnect = useDisconnect();
-  const switchChain = useSwitchChain();
-  const write = useWriteContract();
-  const client = usePublicClient({ chainId: sepolia.id });
+  const wallet = useActingWallet();
+  const address = wallet.address;
+  const a = useAuction();
+  const now = useNow();
+  const [alert, setAlert] = useState<Alert>(null);
+  const fail = (title: string, text: string) => setAlert({ tone: "bad", title, text });
+  const { busy, setBusy, send } = useSend(fail, () => Promise.all([a.ready && a.refetch(), refetchOwned(), refetchSaved()]));
 
-  const { data, refetch } = useReadContracts({
-    contracts: [
-      { ...auction, functionName: "maker" },
-      { ...auction, functionName: "phase" },
-      { ...auction, functionName: "supply" },
-      { ...auction, functionName: "fanUnits" },
-      { ...auction, functionName: "reservePrice" },
-      { ...auction, functionName: "minRevealTime" },
-      { ...auction, functionName: "revealStart" },
-      { ...auction, functionName: "clearingPrice" },
-      { ...auction, functionName: "fanWinners" },
-      { ...auction, functionName: "auctionWinners" },
-      { ...auction, functionName: "biddersCount" },
-      { ...auction, functionName: "makerFunds" },
-    ],
-    allowFailure: false,
-    query: { refetchInterval: 4000 },
-  });
-  const count = data?.[10];
-  const phaseN = data?.[1];
-
-  // Every bid, re-read whenever the bid count or phase moves (and on the 4s poll).
-  const { data: rows = [], refetch: refetchRows } = useQuery({
-    queryKey: ["bids", count?.toString(), phaseN],
-    enabled: !!client && count !== undefined,
-    refetchInterval: 4000,
-    queryFn: async (): Promise<Row[]> => {
-      const bidders = await client!.multicall({
-        contracts: Array.from({ length: Number(count) }, (_, i) => ({ ...auction, functionName: "bidders", args: [BigInt(i)] }) as const),
-        allowFailure: false,
-      });
-      const bids = await client!.multicall({
-        contracts: bidders.map((b) => ({ ...auction, functionName: "bids", args: [b] }) as const),
-        allowFailure: false,
-      });
-      return bids.map(([, deposit, amount, revealed, claimed, outcome], i) => ({
-        bidder: bidders[i],
-        deposit,
-        amount,
-        revealed,
-        claimed,
-        outcome,
-      }));
-    },
-  });
-
-  // Units this wallet holds (the ERC721 isn't enumerable): everything ever sent here, still owned.
+  const client = a.client;
+  const phase = a.ready ? a.phase : undefined;
   const { data: owned = [], refetch: refetchOwned } = useQuery({
-    queryKey: ["auction-owned", address, rows.filter((r) => r.claimed).length],
-    enabled: !!client && !!address && phaseN === 2,
+    queryKey: ["auction-owned", AUCTION_ADDRESS, address, a.ready && a.rows.filter((r) => r.claimed).length],
+    enabled: !!client && !!address && phase === "Settled",
     queryFn: async () => {
       const logs = await client!.getContractEvents({ ...auction, eventName: "Transfer", args: { to: address }, fromBlock: AUCTION_DEPLOY_BLOCK });
       const ids = [...new Set(logs.map((l) => l.args.tokenId!))];
       const units = await Promise.all(
         ids.map(async (id) => {
           const owner = await client!.readContract({ ...auction, functionName: "ownerOf", args: [id] }).catch(() => null);
-          if (owner?.toLowerCase() !== address!.toLowerCase()) return null;
+          if (!same(owner ?? undefined, address)) return null;
           return { id, paid: await client!.readContract({ ...auction, functionName: "paidFor", args: [id] }) };
         }),
       );
       return units.filter((u) => u !== null);
     },
   });
-
-  const { data: saved, refetch: refetchSaved } = useQuery({
-    queryKey: ["saved-bid", address],
-    enabled: !!address,
-    queryFn: () => loadSaved(address!),
-  });
+  const { data: saved, refetch: refetchSaved } = useQuery({ queryKey: ["saved-bid", AUCTION_ADDRESS, address], enabled: !!address, queryFn: () => loadSaved(address!) });
 
   const [rpContext, setRpContext] = useState<RpContext | null>(null);
   const [widgetOpen, setWidgetOpen] = useState(false);
+  // A ref too: IDKit's onSuccess closure is from the render before handleVerify stored the voucher.
   const signedRef = useRef<Signed | null>(null);
-  const [pending, setPending] = useState<Signed | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
-  const [notice, setNotice] = useState<Notice>(null);
+  const [signed, setSignedState] = useState<Signed | null>(null);
+  const setSigned = (s: Signed | null) => {
+    signedRef.current = s;
+    setSignedState(s);
+  };
   const [worldIdOn, setWorldIdOn] = useState(true);
   const [bidYen, setBidYen] = useState("");
   const [depositYen, setDepositYen] = useState("");
   const testMode = TEST_BUYS && !worldIdOn;
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
 
-  if (!data) {
-    return <main className="mx-auto max-w-5xl p-8 text-sm" style={{ color: "var(--muted)" }}>Loading the auction…</main>;
-  }
+  if (!a.ready) return <Skeleton />;
 
-  const [maker, , supply, fanUnits, reserve, minReveal, revealStart, clearing, fanWinners, auctionWinners, , makerFunds] = data;
-  const phase = PHASES[phaseN!];
-  const toYen = (wei: bigint) => (Number(wei) * YEN_FOR_RESERVE) / Number(reserve);
-  const fromYen = (y: number) => (BigInt(Math.round(y)) * reserve) / BigInt(YEN_FOR_RESERVE);
-  const isMaker = !!address && address.toLowerCase() === maker.toLowerCase();
-  const wrongChain = isConnected && chainId !== sepolia.id;
-  const mine = rows.find((r) => address && r.bidder.toLowerCase() === address.toLowerCase());
-  const settleAt = Number(revealStart + minReveal) * 1000;
-  const settleIn = Math.max(0, Math.ceil((settleAt - now) / 1000));
+  const { rows, reserve, clearing, auctionWinners, fanWinners, supply, fanUnits, toYen, fromYen } = a;
+  const mine = rows.find((r) => same(r.bidder, address));
+  const settleIn = Math.max(0, Math.ceil((a.settleAt - now) / 1000));
+  const myAmount = saved ? BigInt(saved.amount) : mine?.revealed ? mine.amount : undefined;
 
   // Deposit defaults to the next ¥10,000 step strictly above the bid, so it never equals the bid.
   const bidNum = Number(bidYen);
@@ -202,44 +106,25 @@ export default function AuctionPage() {
   const depositNum = depositYen === "" ? autoDeposit : Number(depositYen);
   const bidValid = bidNum >= YEN_FOR_RESERVE && depositNum >= bidNum;
 
-  async function send(label: string, run: () => Promise<Hex>): Promise<boolean> {
-    setBusy(label);
-    try {
-      const hash = await run();
-      setBusy("Waiting for the block…");
-      const receipt = await client!.waitForTransactionReceipt({ hash });
-      if (receipt.status !== "success") throw new Error("The transaction reverted.");
-      await Promise.all([refetch(), refetchRows(), refetchOwned()]);
-      return true;
-    } catch (e) {
-      setNotice({ tone: "bad", text: txMessage(e) });
-      return false;
-    } finally {
-      setBusy(null);
-    }
+  function resetForm() {
+    setSigned(null);
+    setBidYen("");
+    setDepositYen("");
   }
 
   async function testBid() {
-    setNotice(null);
     setBusy("Getting a test voucher…");
     try {
-      const res = await fetch("/api/test-voucher", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ buyer: address, drop: "auction" }),
-      });
+      const res = await fetch("/api/test-voucher", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ buyer: address, drop: "auction" }) });
       if (!res.ok) throw new Error("Test mode is not enabled on the server.");
-      signedRef.current = await res.json();
+      await placeBid(await res.json());
     } catch (e) {
-      setNotice({ tone: "bad", text: e instanceof Error ? e.message : String(e) });
+      fail("Test bid failed", e instanceof Error ? e.message : String(e));
       setBusy(null);
-      return;
     }
-    await placeBid();
   }
 
   async function startVerify() {
-    setNotice(null);
     setBusy("Preparing verification…");
     try {
       const res = await fetch("/api/rp-context", { method: "POST" });
@@ -247,382 +132,233 @@ export default function AuctionPage() {
       setRpContext(await res.json());
       setWidgetOpen(true);
     } catch (e) {
-      setNotice({ tone: "bad", text: e instanceof Error ? e.message : String(e) });
+      fail("World ID unavailable", e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(null);
     }
   }
 
   async function handleVerify(result: IDKitResult) {
-    const res = await fetch("/api/verify", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ buyer: address, result, drop: "auction" }),
-    });
+    const res = await fetch("/api/verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ buyer: address, result, drop: "auction" }) });
     const body = await res.json();
     if (!res.ok) {
-      setNotice({ tone: "bad", text: REJECTIONS[body.code] ?? `Verification failed: ${body.message}` });
+      const r = REJECTIONS[body.code] ?? { title: "Verification failed", text: body.message ?? "World ID could not verify this proof." };
+      setAlert({ tone: "bad", ...r });
       setWidgetOpen(false);
       throw new Error(body.code);
     }
-    signedRef.current = body;
-    setPending(body);
+    setSigned(body);
   }
 
-  async function placeBid() {
-    const signed = signedRef.current;
-    if (!signed || !address) return;
+  async function placeBid(voucher = signedRef.current) {
+    if (!voucher || !address) return;
     const amount = fromYen(bidNum);
     const deposit = fromYen(depositNum);
     // Saved before sending: if the bid lands, the secret to open it must already be here.
     const secret = randomSecret();
     try {
-      localStorage.setItem(savedKey(address), JSON.stringify({ amount: amount.toString(), secret }));
+      storeSaved(address, { amount: amount.toString(), secret });
     } catch {
-      setNotice({ tone: "bad", text: "This browser won't store your bid's secret, so it could never be revealed. Try another browser." });
+      fail("Browser storage blocked", "This browser won't store your bid's secret, so the bid could never be revealed. Try another browser.");
       return;
     }
-    const v = signed.voucher;
+    const v = voucher.voucher;
     const call = bidCall(
       { dropId: v.dropId, buyer: v.buyer, nullifierHash: BigInt(v.nullifierHash), deadline: BigInt(v.deadline) },
-      signed.signature,
+      voucher.signature,
       commitmentOf(amount, secret, address),
       deposit,
     );
-    const ok = await send("Confirm the sealed bid in your wallet…", () =>
-      write.mutateAsync({ address: UNIVERSAL_ROUTER, abi: universalRouterAbi, functionName: "execute", chainId: sepolia.id, account: address, ...call }),
+    const ok = await send("Confirm the sealed bid in your wallet…", (w) =>
+      w({ address: UNIVERSAL_ROUTER, abi: universalRouterAbi, functionName: "execute", chainId: sepolia.id, account: address, ...call }),
     );
-    await refetchSaved();
     if (ok) {
-      signedRef.current = null;
-      setPending(null);
-      setNotice({ tone: "good", text: `Sealed bid placed with a ${yen(depositNum)} deposit. Nobody can see your ${yen(bidNum)} until you reveal it.` });
+      setAlert({
+        tone: "good",
+        title: "Sealed",
+        text: `Your ${yen(bidNum)} bid is locked in. Nobody can see it, not even the maker, until you reveal it after bidding closes.`,
+      });
+      resetForm();
     }
   }
 
   async function reveal() {
     const s = loadSaved(address!);
     if (!s) return;
-    if (await send("Confirm the reveal in your wallet…", () =>
-      write.mutateAsync({ ...auction, functionName: "reveal", chainId: sepolia.id, account: address, args: [BigInt(s.amount), s.secret] }))) {
-      setNotice({ tone: "good", text: `Revealed your bid of ${yen(toYen(BigInt(s.amount)))}.` });
-    }
+    const ok = await send("Confirm the reveal in your wallet…", (w) =>
+      w({ ...auction, functionName: "reveal", chainId: sepolia.id, account: address, args: [BigInt(s.amount), s.secret] }),
+    );
+    if (ok) setAlert({ tone: "good", title: "Revealed", text: `Your ${yen(toYen(BigInt(s.amount)))} bid is open. Results come when the maker settles.` });
   }
 
   async function claim() {
-    if (await send("Confirm in your wallet…", () => write.mutateAsync({ ...auction, functionName: "claim", chainId: sepolia.id, account: address }))) {
-      setNotice({ tone: "good", text: mine?.outcome ? "Claimed: your unit is below, and the rest of your deposit is back in your wallet." : "Your deposit is back in your wallet." });
-    }
+    const won = !!mine?.outcome;
+    const ok = await send("Confirm in your wallet…", (w) => w({ ...auction, functionName: "claim", chainId: sepolia.id, account: address }));
+    if (ok) setAlert({ tone: "good", title: won ? "Claimed" : "Refunded", text: won ? "Your unit is in your wallet, and the rest of your deposit is back." : "Your full deposit is back in your wallet." });
   }
 
-  // Asks the wallet to connect more of its accounts to the site; they then appear in the picker.
-  async function addWallet() {
-    const provider = (await connector?.getProvider()) as { request(a: { method: string; params?: unknown[] }): Promise<unknown> } | undefined;
-    await provider?.request({ method: "wallet_requestPermissions", params: [{ eth_accounts: {} }] }).catch(() => {});
-  }
-
-  function pickWallet(a: Address) {
-    // A voucher and a half-filled bid belong to the previous wallet.
-    signedRef.current = null;
-    setPending(null);
-    setNotice(null);
-    setBidYen("");
-    setDepositYen("");
-    setPicked(a);
-  }
-
-  const makerCall = (functionName: "closeBidding" | "settle" | "withdraw", label: string) =>
-    void send(label, () => write.mutateAsync({ ...auction, functionName, chainId: sepolia.id, account: address }));
-
-  const card = "rounded-2xl p-6";
-  const cardStyle = { background: "var(--surface-1)", border: "1px solid var(--border)" };
-  const primaryBtn =
-    "w-full rounded-xl px-5 py-3 text-base font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50";
-  const secondaryBtn = "rounded-xl px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50";
-  const muted = { color: "var(--text-secondary)" };
-
+  // ---- The one action that matters right now, for this wallet. ----
   let action: React.ReactNode;
-  if (!isConnected)
-    action = (
-      <button className={primaryBtn} style={{ background: "var(--series-1)" }} disabled={!connectors[0] || connect.isPending}
-        onClick={() => connect.mutate({ connector: connectors[0] })}>
-        Connect wallet
-      </button>
-    );
-  else if (wrongChain)
-    action = (
-      <button className={primaryBtn} style={{ background: "var(--series-1)" }} onClick={() => switchChain.mutate({ chainId: sepolia.id })}>
-        Switch to Sepolia
-      </button>
-    );
+  if (!wallet.isConnected || wallet.wrongChain) action = <p className="text-ink-2">Connect a wallet on Sepolia to take part.</p>;
   else if (phase === "Bidding" && mine)
-    action = <p style={muted}>Your sealed bid is in, with a {yen(toYen(mine.deposit))} deposit. Come back to reveal it when bidding closes.</p>;
+    action = (
+      <Callout icon={<LockSimple size={22} weight="bold" />} title="Your sealed bid is in">
+        {myAmount !== undefined ? `You bid ${yen(toYen(myAmount))}. ` : ""}Come back to reveal it when the maker closes bidding.
+      </Callout>
+    );
   else if (phase === "Bidding")
     action = (
-      <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
-          <label className="text-sm" style={muted}>
-            Your bid (¥)
-            <input type="number" inputMode="numeric" min={YEN_FOR_RESERVE} step={500} value={bidYen} placeholder={`≥ ${YEN_FOR_RESERVE}`}
-              onChange={(e) => setBidYen(e.target.value)}
-              className="mt-1 w-full rounded-lg px-3 py-2 text-base" style={{ border: "1px solid var(--border)", color: "var(--text-primary)", background: "var(--page)" }} />
+      <div className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className="hud mb-1.5 block">Your bid (¥)</span>
+            <input type="number" inputMode="numeric" min={YEN_FOR_RESERVE} step={500} value={bidYen} placeholder={`${YEN_FOR_RESERVE} or more`} onChange={(e) => setBidYen(e.target.value)} className="field" />
           </label>
-          <label className="text-sm" style={muted}>
-            Deposit (¥)
-            <input type="number" inputMode="numeric" min={bidNum || 0} step={1000} value={depositYen} placeholder={autoDeposit ? String(autoDeposit) : ""}
-              onChange={(e) => setDepositYen(e.target.value)}
-              className="mt-1 w-full rounded-lg px-3 py-2 text-base" style={{ border: "1px solid var(--border)", color: "var(--text-primary)", background: "var(--page)" }} />
+          <label className="block">
+            <span className="hud mb-1.5 block">Deposit (¥)</span>
+            <input type="number" inputMode="numeric" min={bidNum || 0} step={1000} value={depositYen} placeholder={autoDeposit ? String(autoDeposit) : "auto"} onChange={(e) => setDepositYen(e.target.value)} className="field" />
           </label>
         </div>
-        <p className="text-xs" style={{ color: "var(--muted)" }}>
-          The deposit is public and at least your bid, so it hides the bid. If you win you pay the clearing price, not your bid, and get the rest back.
+        <div className="flex flex-wrap gap-2">
+          {PRESETS.map((p) => (
+            <button key={p} onClick={() => setBidYen(String(p))} className={`rounded border px-3 py-1 font-mono text-sm transition-colors ${bidNum === p ? "border-accent text-accent" : "border-line text-ink-2 hover:border-line-strong"}`}>
+              {yen(p)}
+            </button>
+          ))}
+        </div>
+        <p className="text-sm leading-relaxed text-ink-3">
+          Bid the most it&apos;s worth to you. Winners pay one shared price, the highest losing bid, never their own bid. The deposit is at least your bid, so it hides it; the difference comes back.
         </p>
-        {pending ? (
-          <button className={primaryBtn} style={{ background: "var(--series-1)" }} disabled={!!busy || !bidValid} onClick={() => void placeBid()}>
-            {busy ?? `Verified — place sealed bid (${yen(depositNum)} deposit)`}
+        {signed ? (
+          <button className="btn btn-primary w-full" disabled={!!busy || !bidValid} onClick={() => void placeBid()}>
+            {busy ?? (
+              <>
+                <ShieldCheck size={18} weight="bold" /> Verified. Seal my bid
+              </>
+            )}
           </button>
         ) : (
-          <button className={primaryBtn} style={{ background: testMode ? "var(--bad)" : "var(--series-1)" }} disabled={!!busy || !bidValid}
-            onClick={() => void (testMode ? testBid() : startVerify())}>
-            {busy ?? (testMode ? "Test bid (no World ID)" : "Verify with World ID & place sealed bid")}
+          <button className={`btn w-full ${testMode ? "bg-bad text-white" : "btn-primary"}`} disabled={!!busy || !bidValid} onClick={() => void (testMode ? testBid() : startVerify())}>
+            {busy ?? (testMode ? "Test bid (no World ID)" : (
+              <>
+                <ShieldCheck size={18} weight="bold" /> Verify with World ID and seal bid
+              </>
+            ))}
           </button>
         )}
       </div>
     );
   else if (phase === "Reveal" && mine && !mine.revealed)
     action = saved ? (
-      <button className={primaryBtn} style={{ background: "var(--series-1)" }} disabled={!!busy} onClick={() => void reveal()}>
-        {busy ?? `Reveal my bid of ${yen(toYen(BigInt(saved.amount)))}`}
+      <button className="btn btn-primary w-full" disabled={!!busy} onClick={() => void reveal()}>
+        {busy ?? (
+          <>
+            <Eye size={18} weight="bold" /> Reveal my {yen(toYen(BigInt(saved.amount)))} bid
+          </>
+        )}
       </button>
     ) : (
-      <p style={{ color: "var(--bad)" }}>This browser doesn&apos;t have the secret for your bid, so it can&apos;t be revealed. Open the page in the browser you bid from.</p>
+      <Callout tone="bad" title="Secret not in this browser">Your bid can only be opened from the browser you bid from.</Callout>
     );
   else if (phase === "Reveal")
-    action = <p style={muted}>{mine ? "Revealed. " : ""}Results after the reveal window{settleIn > 0 ? ` — at least ${settleIn}s more` : ""}, when the maker settles.</p>;
+    action = (
+      <Callout icon={<EyeSlash size={22} />} title={mine ? "Revealed" : "Reveal in progress"}>
+        Results arrive when the maker settles{settleIn > 0 ? `, in ${settleIn}s at the earliest` : ""}.
+      </Callout>
+    );
   else if (mine && mine.revealed && !mine.claimed) {
     const price = mine.outcome === OUTCOME.fan ? reserve : mine.outcome === OUTCOME.auction ? clearing : 0n;
     action = (
-      <button className={primaryBtn} style={{ background: "var(--series-1)" }} disabled={!!busy} onClick={() => void claim()}>
-        {busy ?? (mine.outcome ? `You won! Claim your unit + ${yen(toYen(mine.deposit - price))} back` : `Not this time — claim your ${yen(toYen(mine.deposit))} back`)}
-      </button>
+      <div className="space-y-3">
+        {mine.outcome ? (
+          <Callout tone="good" icon={<Trophy size={22} weight="fill" />} title={mine.outcome === OUTCOME.fan ? "You won the fan raffle" : "You won"}>
+            You pay {yen(toYen(price))}{myAmount !== undefined && myAmount > price ? `, not your ${yen(toYen(myAmount))} bid` : ""}. The rest of your deposit comes back.
+          </Callout>
+        ) : (
+          <Callout title="Not this time">Your whole deposit comes back.</Callout>
+        )}
+        <button className="btn btn-primary w-full" disabled={!!busy} onClick={() => void claim()}>
+          {busy ?? (mine.outcome ? `Claim unit + ${yen(toYen(mine.deposit - price))}` : `Claim ${yen(toYen(mine.deposit))} back`)}
+        </button>
+      </div>
     );
-  } else if (mine && !mine.revealed) action = <p style={{ color: "var(--bad)" }}>Your bid wasn&apos;t revealed in time, so its deposit was forfeited.</p>;
-  else action = <p style={muted}>The auction has settled.</p>;
-
-  const badge =
-    phase === "Bidding" ? `Sealed bidding open — ${rows.length} bid${rows.length === 1 ? "" : "s"}` :
-    phase === "Reveal" ? `Revealing — ${rows.filter((r) => r.revealed).length} of ${rows.length} open` :
-    `Settled — ${yen(toYen(auctionWinners > 0n ? clearing : reserve))} per unit`;
-
-  // Bids, highest first once revealed. Sealed bids show only their deposit.
-  const sorted = [...rows].sort((a, b) => (a.revealed === b.revealed ? Number(b.amount - a.amount) : a.revealed ? -1 : 1));
-  const top = Math.max(...rows.map((r) => toYen(r.revealed ? r.amount : 0n)), toYen(clearing), YEN_FOR_RESERVE) * 1.1;
-  const pct = (y: number) => `${(y / top) * 100}%`;
-  const gap = auctionWinners * (clearing - reserve);
+  } else if (mine && !mine.revealed) action = <Callout tone="bad" title="Deposit forfeited">Your bid wasn&apos;t revealed in time.</Callout>;
+  else if (mine) action = <Callout title="All done">You&apos;ve claimed everything from this drop.</Callout>;
+  else action = <Callout title="Drop settled">This drop is over. Watch for the next one.</Callout>;
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-5 py-8">
-      <header className="mb-8 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-4">
-          <div className="text-lg font-semibold tracking-tight">Fair Drop</div>
-          <nav className="flex gap-1 text-sm">
-            <span className="rounded-full px-3 py-1 font-medium" style={{ background: "color-mix(in srgb, var(--series-1) 12%, transparent)", color: "var(--series-1)" }}>Auction</span>
-            <Link href="/" className="rounded-full px-3 py-1" style={muted}>Curve drop</Link>
-          </nav>
-        </div>
-        <div className="flex items-center gap-3">
-          {TEST_BUYS && (
-            <label className="flex cursor-pointer items-center gap-2 text-sm" style={muted}>
-              World ID
-              <button role="switch" aria-checked={worldIdOn} onClick={() => setWorldIdOn((v) => !v)}
-                className="relative h-6 w-11 rounded-full transition"
-                style={{ background: worldIdOn ? "var(--good)" : "var(--bad)" }}>
-                <span className="absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all" style={{ left: worldIdOn ? "1.375rem" : "0.125rem" }} />
+    <>
+      <SiteNav
+        right={
+          <div className="flex items-center gap-3">
+            {TEST_BUYS && (
+              <button role="switch" aria-checked={worldIdOn} onClick={() => setWorldIdOn((v) => !v)} className={`hidden rounded border px-2.5 py-1.5 font-mono text-xs sm:block ${worldIdOn ? "border-human/50 text-human" : "border-bad text-bad"}`}>
+                World ID {worldIdOn ? "on" : "off"}
               </button>
-              <span className="w-6 font-medium">{worldIdOn ? "On" : "Off"}</span>
-            </label>
-          )}
-          {isConnected && address && (
-            <div className="flex items-center gap-2 text-sm">
-              <select aria-label="Acting wallet" value={address} onChange={(e) => pickWallet(e.target.value as Address)}
-                className="rounded-full px-3 py-1.5" style={{ border: "1px solid var(--border)", color: "var(--text-primary)", background: "var(--surface-1)" }}>
-                {(addresses ?? [address]).map((a) => (
-                  <option key={a} value={a}>{short(a)}{a.toLowerCase() === maker.toLowerCase() ? " · maker" : ""}</option>
-                ))}
-              </select>
-              <button className="rounded-full px-3 py-1.5" style={{ border: "1px solid var(--border)", color: "var(--text-secondary)" }}
-                onClick={() => void addWallet()} title="Connect more accounts from your wallet">
-                + Wallet
-              </button>
-              <button className="rounded-full px-3 py-1.5" style={{ border: "1px solid var(--border)", color: "var(--text-secondary)" }}
-                onClick={() => disconnect.mutate({})}>
-                Disconnect
-              </button>
-            </div>
-          )}
-        </div>
-      </header>
-
+            )}
+            <WalletBar wallet={wallet} maker={a.maker} onPick={resetForm} />
+          </div>
+        }
+      />
       {testMode && (
-        <div role="alert" className="mb-6 rounded-xl px-4 py-3 text-sm font-medium"
-          style={{ color: "var(--bad)", background: "color-mix(in srgb, var(--bad) 12%, transparent)" }}>
-          Test mode: World ID verification is OFF. Each bid uses a random made-up identity. Use a different wallet per bid.
-          Not the real flow — switch World ID back on for demos.
+        <div role="alert" className="border-b border-bad bg-bad/10 px-4 py-2 text-center text-sm text-bad">
+          Test mode: World ID is off and each bid uses a made-up identity. Use a different wallet per bid.
         </div>
       )}
 
-      <div className="grid items-start gap-6 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-        <section className={card} style={cardStyle}>
-          <div className="mb-5 flex aspect-[4/3] items-center justify-center rounded-xl text-6xl"
-            style={{ background: "linear-gradient(135deg, #fde2e4 0%, #e2ecfd 100%)" }} aria-hidden>
-            🎏
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Fair Drop — sealed-bid edition</h1>
-          <p className="mt-1 text-sm" style={muted}>
-            {supply.toString()} units · {fanUnits.toString()} raffled to fans at 定価 {yen(YEN_FOR_RESERVE)} · the rest to the highest bids, all at one price · one bid per person, verified with World ID
-          </p>
-          <div className="mt-4 inline-flex rounded-full px-3 py-1 text-sm font-medium"
-            style={{ background: "color-mix(in srgb, var(--series-1) 12%, transparent)", color: "var(--series-1)" }}>
-            {badge}
-          </div>
+      <main className="mx-auto w-full max-w-7xl px-4 pb-24 md:px-8">
+        <section className="grid items-start gap-10 py-10 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:py-14">
+          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }} className="mx-auto w-full max-w-sm">
+            <DropCard edition={supply.toString().padStart(3, "0")} serial="???" />
+          </motion.div>
 
-          <div className="mt-6">{action}</div>
-          {notice && (
-            <p role="status" className="mt-4 rounded-xl px-4 py-3 text-sm font-medium"
-              style={{
-                color: notice.tone === "bad" ? "var(--bad)" : notice.tone === "good" ? "var(--good)" : "var(--text-secondary)",
-                background: `color-mix(in srgb, ${notice.tone === "bad" ? "var(--bad)" : notice.tone === "good" ? "var(--good)" : "var(--muted)"} 12%, transparent)`,
-              }}>
-              {notice.tone === "bad" ? "✕ " : notice.tone === "good" ? "✓ " : ""}{notice.text}
-            </p>
-          )}
-        </section>
-
-        <section className={card} style={cardStyle}>
-          <h2 className="text-base font-semibold">Bids</h2>
-          <p className="mb-4 text-sm" style={muted}>
-            {phase === "Bidding"
-              ? "Sealed: only deposits are visible until bidding closes. Bidding your true value is the best strategy — winners pay the highest losing bid, not their own."
-              : phase === "Reveal"
-                ? "Bids open as bidders reveal them."
-                : "Fan units were raffled at 定価 first. Every other winner pays the same price: the highest losing bid."}
-          </p>
-          {rows.length === 0 ? (
-            <p className="text-sm" style={{ color: "var(--muted)" }}>No bids yet.</p>
-          ) : (
-            <div className="relative" style={{ fontVariantNumeric: "tabular-nums" }}>
-              <ul className="space-y-2">
-                {sorted.map((r) => {
-                  const you = address && r.bidder.toLowerCase() === address.toLowerCase();
-                  const tag =
-                    phase !== "Settled" ? (r.revealed ? "" : "sealed") :
-                    !r.revealed ? "forfeited" :
-                    r.outcome === OUTCOME.fan ? "fan raffle · 定価" :
-                    r.outcome === OUTCOME.auction ? "won" :
-                    r.amount < reserve ? "below 定価" : "lost";
-                  const color =
-                    r.outcome === OUTCOME.fan ? "var(--good)" : r.outcome === OUTCOME.auction ? "var(--series-1)" : "var(--muted)";
-                  return (
-                    <li key={r.bidder} className="grid grid-cols-[6.5rem_minmax(0,1fr)] items-center gap-3 text-sm">
-                      <span className="truncate" style={{ fontWeight: you ? 600 : 400 }}>{you ? "You" : short(r.bidder)}</span>
-                      <div className="relative h-7">
-                        {r.revealed ? (
-                          <div className="absolute inset-y-0 left-0 z-0 rounded" style={{ width: pct(toYen(r.amount)), background: color, opacity: phase === "Settled" && !r.outcome ? 0.35 : 0.9 }} />
-                        ) : (
-                          <div className="absolute inset-y-0 left-0 z-0 rounded" style={{ width: "100%", background: "repeating-linear-gradient(45deg, var(--grid) 0 6px, transparent 6px 12px)" }} />
-                        )}
-                        <span className="absolute inset-y-0 left-2 z-[2] flex items-center text-xs font-medium" style={{ color: "var(--text-primary)" }}>
-                          {r.revealed ? yen(toYen(r.amount)) : `🔒 deposit ${yen(toYen(r.deposit))}`}
-                          {tag && <span className="ml-2" style={{ color: "var(--text-secondary)" }}>{tag}</span>}
-                        </span>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-              {phase !== "Bidding" && (
-                <div className="pointer-events-none absolute inset-y-0 right-0 z-[1]" style={{ left: "calc(6.5rem + 0.75rem)" }}>
-                  <div className="absolute inset-y-0 border-l border-dashed" style={{ left: pct(YEN_FOR_RESERVE), borderColor: "var(--good)" }} />
-                  {phase === "Settled" && auctionWinners > 0n && (
-                    <div className="absolute inset-y-0 border-l-2" style={{ left: pct(toYen(clearing)), borderColor: "var(--series-1)" }} />
-                  )}
-                </div>
-              )}
+          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.08, ease: [0.16, 1, 0.3, 1] }} className="space-y-6">
+            <div>
+              <h1 className="font-display text-5xl uppercase leading-[0.95] tracking-wide md:text-6xl">Limited collector figure</h1>
+              <p className="mt-3 max-w-[60ch] text-ink-2">
+                {supply.toString()} units. {fanUnits.toString()} raffled to fans at 定価 {yen(YEN_FOR_RESERVE)}. The other {(supply - fanUnits).toString()} go to the highest sealed bids, all at one price. One bid per verified human.
+              </p>
             </div>
-          )}
-          {phase !== "Bidding" && (
-            <p className="mt-3 text-xs" style={{ color: "var(--muted)" }}>
-              Dashed line: 定価 {yen(YEN_FOR_RESERVE)}.{phase === "Settled" && auctionWinners > 0n ? ` Solid line: clearing price ${yen(toYen(clearing))}.` : ""}
-            </p>
-          )}
-          {phase === "Settled" && (
-            <dl className="mt-5 grid grid-cols-3 gap-4 border-t pt-4" style={{ borderColor: "var(--border)", fontVariantNumeric: "tabular-nums" }}>
-              <div>
-                <dt className="text-xs" style={{ color: "var(--muted)" }}>Fan units at 定価</dt>
-                <dd className="text-xl font-semibold">{fanWinners.toString()} × {yen(YEN_FOR_RESERVE)}</dd>
-              </div>
-              <div>
-                <dt className="text-xs" style={{ color: "var(--muted)" }}>Auction units</dt>
-                <dd className="text-xl font-semibold">{auctionWinners.toString()} × {yen(toYen(auctionWinners > 0n ? clearing : reserve))}</dd>
-              </div>
-              <div>
-                <dt className="text-xs" style={{ color: "var(--muted)" }}>Above 定価, to the maker</dt>
-                <dd className="text-xl font-semibold" style={{ color: "var(--good)" }}>{yen(toYen(gap))}</dd>
-                <dd className="text-xs" style={{ color: "var(--muted)" }}>the gap scalpers used to take</dd>
-              </div>
-            </dl>
-          )}
-          <p className="mt-3 text-xs" style={{ color: "var(--muted)" }}>Yen at demo scale: {eth(reserve)} is shown as {yen(YEN_FOR_RESERVE)}.</p>
+            <PhaseTrack phase={a.phase} revealLeft={settleIn} revealTotal={Number(a.minReveal)} />
+            <div className="panel notch p-5">{action}</div>
+            <Link href="/#how" className="inline-flex items-center gap-1.5 text-sm text-ink-2 hover:text-ink">
+              How the price is set <ArrowRight size={14} />
+            </Link>
+          </motion.div>
         </section>
-      </div>
 
-      {isConnected && owned.length > 0 && (
-        <section className={`${card} mt-6`} style={cardStyle}>
-          <h2 className="text-base font-semibold">My units</h2>
-          <ul className="mt-3 divide-y" style={{ borderColor: "var(--border)" }}>
-            {owned.map(({ id, paid }) => (
-              <li key={id.toString()} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                <div>
-                  <div className="font-medium">Unit #{id.toString()}</div>
-                  <div className="text-sm" style={{ ...muted, fontVariantNumeric: "tabular-nums" }}>
-                    Paid {yen(toYen(paid))}. Redeem it with the maker for the physical item.
+        <BidBoard rows={rows} phase={a.phase} you={address} myAmount={myAmount} toYen={toYen} reserve={reserve} clearing={clearing} auctionWinners={auctionWinners} />
+
+        {a.phase === "Settled" && (
+          <section className="mt-6 grid gap-px overflow-hidden border border-line bg-line sm:grid-cols-3">
+            <Stat label="Fan units at 定価" value={`${fanWinners} × ${yen(YEN_FOR_RESERVE)}`} />
+            <Stat label="Auction units" value={`${auctionWinners} × ${yen(toYen(auctionWinners > 0n ? clearing : reserve))}`} />
+            <Stat label="Above 定価, to the maker" value={yen(toYen(auctionWinners * (clearing - reserve)))} accent sub="the gap scalpers used to take" />
+          </section>
+        )}
+
+        {owned.length > 0 && (
+          <section className="mt-10">
+            <h2 className="font-display text-3xl uppercase tracking-wide">Your units</h2>
+            <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+              {owned.map(({ id, paid }) => (
+                <li key={id.toString()} className="panel flex items-center gap-4 p-4">
+                  <Package size={28} className="text-accent" />
+                  <div>
+                    <div className="font-mono">Unit #{id.toString()}</div>
+                    <div className="text-sm text-ink-2">Paid {yen(toYen(paid))}. Redeem it with the maker for the figure.</div>
                   </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        <p className="mt-10 font-mono text-xs text-ink-3">
+          Demo scale: {(Number(reserve) / 1e18).toString()} ETH on Sepolia is shown as {yen(YEN_FOR_RESERVE)}.
+        </p>
+      </main>
 
-      {isMaker && (
-        <section className={`${card} mt-6`} style={{ ...cardStyle, borderStyle: "dashed" }}>
-          <h2 className="text-base font-semibold">Maker console</h2>
-          <p className="mt-1 text-sm" style={muted}>
-            You control the pace. Closing early gives you no edge: bids are sealed.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-3">
-            {phase === "Bidding" && (
-              <button className={secondaryBtn} style={{ border: "1px solid var(--border)" }} disabled={!!busy || rows.length === 0}
-                onClick={() => makerCall("closeBidding", "Closing bidding…")}>
-                Close bidding ({rows.length} bid{rows.length === 1 ? "" : "s"})
-              </button>
-            )}
-            {phase === "Reveal" && (
-              <button className={secondaryBtn} style={{ border: "1px solid var(--border)" }} disabled={!!busy || settleIn > 0}
-                onClick={() => makerCall("settle", "Settling…")}>
-                {settleIn > 0 ? `Settle — reveal window open for ${settleIn}s` : "Settle: raffle fan units, clear the auction"}
-              </button>
-            )}
-            {phase === "Settled" && (
-              <button className={secondaryBtn} style={{ border: "1px solid var(--border)" }} disabled={!!busy || makerFunds === 0n}
-                onClick={() => makerCall("withdraw", "Withdrawing…")}>
-                Withdraw {yen(toYen(makerFunds))}
-              </button>
-            )}
-          </div>
-        </section>
-      )}
-
+      <AlertModal alert={alert} onClose={() => setAlert(null)} />
       {rpContext && address && (
         <IDKitRequestWidget
           key={rpContext.nonce}
@@ -637,10 +373,174 @@ export default function AuctionPage() {
           handleVerify={handleVerify}
           onSuccess={() => void placeBid()}
           onError={(code) =>
-            setNotice((n) => n ?? { tone: "bad", text: `Verification was cancelled or failed (World ID code: ${String(code)}).` })
+            // handleVerify already explained a rejection; this covers cancels and widget errors.
+            setAlert((x) => x ?? { tone: "bad", title: "Verification cancelled", text: `World ID didn't complete (code: ${String(code)}). Try again when ready.` })
           }
         />
       )}
-    </main>
+    </>
+  );
+}
+
+function Callout({ title, children, icon, tone }: { title: string; children: React.ReactNode; icon?: React.ReactNode; tone?: "good" | "bad" }) {
+  const color = tone === "good" ? "text-fan" : tone === "bad" ? "text-bad" : "text-accent";
+  return (
+    <div className="flex gap-3">
+      {icon && <div className={`mt-0.5 ${color}`}>{icon}</div>}
+      <div>
+        <div className={`font-display text-xl uppercase tracking-wide ${color}`}>{title}</div>
+        <div className="mt-1 text-ink-2">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }) {
+  return (
+    <div className="bg-panel p-5">
+      <div className="hud">{label}</div>
+      <div className={`mt-1 font-display text-3xl tabular ${accent ? "text-fan" : ""}`}>{value}</div>
+      {sub && <div className="mt-0.5 text-sm text-ink-3">{sub}</div>}
+    </div>
+  );
+}
+
+/** The bid board. Until settlement every other bid is only an address and a seal: amounts and
+ *  deposits stay off screen. Your own bid is the one row you can read. */
+function BidBoard(p: {
+  rows: Row[];
+  phase: "Bidding" | "Reveal" | "Settled";
+  you?: string;
+  myAmount?: bigint;
+  toYen: (w: bigint) => number;
+  reserve: bigint;
+  clearing: bigint;
+  auctionWinners: bigint;
+}) {
+  const settled = p.phase === "Settled";
+  const rows = settled
+    ? [...p.rows].sort((a, b) => (a.revealed === b.revealed ? Number(b.amount - a.amount) : a.revealed ? -1 : 1))
+    : [...p.rows].sort((a, b) => Number(same(b.bidder, p.you)) - Number(same(a.bidder, p.you)));
+  const top = Math.max(...p.rows.map((r) => p.toYen(r.revealed ? r.amount : 0n)), p.toYen(p.clearing), YEN_FOR_RESERVE) * 1.12;
+  const frac = (y: number) => y / top;
+  const revealed = p.rows.filter((r) => r.revealed).length;
+
+  return (
+    <section>
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+        <h2 className="font-display text-3xl uppercase tracking-wide">
+          {settled ? "Results" : "Sealed bids"} <span className="tabular text-ink-3">{p.rows.length}</span>
+        </h2>
+        <p className="text-sm text-ink-3">
+          {p.phase === "Bidding" ? "Amounts stay sealed. You see who bid, not how much." : p.phase === "Reveal" ? `${revealed} of ${p.rows.length} opened. Amounts publish at settlement.` : "Fan raffle at 定価 first. Everyone else pays the highest losing bid."}
+        </p>
+      </div>
+      {rows.length === 0 ? (
+        <div className="panel grid place-items-center gap-2 p-10 text-center text-ink-3">
+          <LockSimple size={28} />
+          No bids yet. The first sealed bid shows up here.
+        </div>
+      ) : (
+        <div className="relative">
+          <ul className="space-y-1.5">
+            <AnimatePresence initial={false}>
+              {rows.map((r) => {
+                const you = same(r.bidder, p.you);
+                return (
+                  <motion.li
+                    key={r.bidder}
+                    layout
+                    initial={{ opacity: 0, x: -16 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ type: "spring", stiffness: 260, damping: 30 }}
+                    className="grid grid-cols-[6.5rem_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[9rem_minmax(0,1fr)]"
+                  >
+                    <span className={`truncate font-mono text-sm ${you ? "text-accent" : "text-ink-2"}`}>{you ? "YOU" : short(r.bidder)}</span>
+                    {settled ? <ResultBar r={r} you={you} frac={frac(p.toYen(r.revealed ? r.amount : 0n))} toYen={p.toYen} reserve={p.reserve} /> : <SealedBar r={r} you={you} myAmount={p.myAmount} toYen={p.toYen} />}
+                  </motion.li>
+                );
+              })}
+            </AnimatePresence>
+          </ul>
+          {settled && (
+            <div className="pointer-events-none absolute inset-y-0 right-0 left-[7.25rem] sm:left-[9.75rem]">
+              <Marker x={frac(YEN_FOR_RESERVE)} color="var(--fan)" dashed label={`定価 ${yen(YEN_FOR_RESERVE)}`} />
+              {p.auctionWinners > 0n && <Marker x={frac(p.toYen(p.clearing))} color="var(--accent)" label={`Clearing ${yen(p.toYen(p.clearing))}`} />}
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function SealedBar({ r, you, myAmount, toYen }: { r: Row; you: boolean; myAmount?: bigint; toYen: (w: bigint) => number }) {
+  if (you)
+    return (
+      <div className="flex h-11 items-center justify-between gap-3 border border-accent bg-accent/10 px-3">
+        <span className="flex items-center gap-2 font-mono text-sm">
+          <Eye size={16} className="text-accent" />
+          {myAmount !== undefined ? <span className="text-ink">{yen(toYen(myAmount))}</span> : "Your bid"}
+          <span className="hidden text-ink-3 sm:inline">only you can see this</span>
+        </span>
+        <span className="hud">{r.revealed ? "opened" : "sealed"}</span>
+      </div>
+    );
+  return (
+    <div className={`flex h-11 items-center justify-between px-3 ${r.revealed ? "border border-line bg-panel" : "hazard border border-accent/30"}`}>
+      <span className="relative flex items-center gap-2 text-sm">
+        {r.revealed ? <EyeSlash size={16} className="text-ink-3" /> : <LockSimple size={16} weight="bold" className="text-accent" />}
+        <span className="font-jp text-base text-ink">{r.revealed ? "開" : "封"}</span>
+        <span className="text-ink-2">{r.revealed ? "Opened, amount hidden until settlement" : "Sealed bid"}</span>
+      </span>
+    </div>
+  );
+}
+
+function ResultBar({ r, you, frac, toYen, reserve }: { r: Row; you: boolean; frac: number; toYen: (w: bigint) => number; reserve: bigint }) {
+  const tag = !r.revealed ? "forfeited" : r.outcome === OUTCOME.fan ? "fan raffle, pays 定価" : r.outcome === OUTCOME.auction ? "won" : r.amount < reserve ? "below 定価" : "lost";
+  const color = r.outcome === OUTCOME.fan ? "var(--fan)" : r.outcome === OUTCOME.auction ? "var(--accent)" : "var(--ink-3)";
+  return (
+    <div className={`relative h-11 ${you ? "outline outline-1 outline-offset-2 outline-accent" : ""}`}>
+      <motion.div
+        className="absolute inset-y-0 left-0 w-full origin-left"
+        style={{ background: color, opacity: r.outcome ? 0.9 : 0.3 }}
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: r.revealed ? frac : 0 }}
+        transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+      />
+      <span className="absolute inset-y-0 left-3 flex items-center gap-2 font-mono text-sm text-ink [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]">
+        {r.revealed ? yen(toYen(r.amount)) : "never revealed"}
+        <span className="text-ink-2">{tag}</span>
+      </span>
+    </div>
+  );
+}
+
+function Marker({ x, color, label, dashed }: { x: number; color: string; label: string; dashed?: boolean }) {
+  return (
+    <motion.div className="absolute inset-y-0 left-0 w-full" initial={{ x: "0%" }} animate={{ x: `${x * 100}%` }} transition={{ duration: 1, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}>
+      <div className={`absolute -top-2 -bottom-2 left-0 ${dashed ? "border-l-2 border-dashed" : "border-l-2"}`} style={{ borderColor: color }} />
+      <div className="absolute -bottom-7 left-0 -translate-x-1/2 whitespace-nowrap font-mono text-xs" style={{ color }}>
+        {label}
+      </div>
+    </motion.div>
+  );
+}
+
+function Skeleton() {
+  return (
+    <>
+      <SiteNav />
+      <main className="mx-auto grid w-full max-w-7xl animate-pulse gap-10 px-4 py-14 md:grid-cols-[5fr_7fr] md:px-8">
+        <div className="notch mx-auto aspect-[5/7] w-full max-w-sm bg-panel" />
+        <div className="space-y-5">
+          <div className="h-14 w-3/4 bg-panel" />
+          <div className="h-5 w-full bg-panel" />
+          <div className="h-16 bg-panel" />
+          <div className="h-48 bg-panel" />
+        </div>
+      </main>
+    </>
   );
 }

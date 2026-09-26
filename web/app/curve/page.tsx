@@ -17,7 +17,7 @@ import {
 } from "wagmi";
 import { sepolia } from "wagmi/chains";
 import { DROP_ADDRESS, DROP_DEPLOY_BLOCK, dropAbi } from "@/lib/drop";
-import { PriceChart } from "./price-chart";
+import { PriceChart } from "../price-chart";
 
 // Sepolia prices are tiny, so yen is shown at a fixed demo scale where the base price reads as
 // ¥3,000 — the worked example in SPEC §6.4. Labelled as such on the page.
@@ -305,7 +305,7 @@ export default function DropPage() {
     <main className="mx-auto w-full max-w-5xl px-5 py-8">
       <header className="mb-8 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-4">
-          <div className="text-lg font-semibold tracking-tight">Fair Drop</div>
+          <Link href="/" className="text-lg font-semibold tracking-tight">Fair Drop</Link>
           <nav className="flex gap-1 text-sm">
             <Link href="/auction" className="rounded-full px-3 py-1" style={{ color: "var(--text-secondary)" }}>Auction</Link>
             <span className="rounded-full px-3 py-1 font-medium" style={{ background: "color-mix(in srgb, var(--series-1) 12%, transparent)", color: "var(--series-1)" }}>Curve drop</span>
