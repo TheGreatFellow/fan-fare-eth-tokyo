@@ -176,14 +176,20 @@ body::after {
 .blink {
   animation: blink 1.2s steps(2, jump-none) infinite;
 }
-@keyframes float {
+@keyframes swing {
+  0%,
+  100% {
+    transform: rotate(-2.5deg);
+  }
   50% {
-    transform: translateY(-4px);
+    transform: rotate(2.5deg);
   }
 }
-.figure-float {
-  transform-box: fill-box;
-  animation: float 3.6s ease-in-out infinite;
+/* Pivots on the key ring at (100, 42) in the card's SVG. */
+.keychain-swing {
+  transform-box: view-box;
+  transform-origin: 100px 42px;
+  animation: swing 4.2s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -192,7 +198,7 @@ body::after {
   }
   .hazard::before,
   .blink,
-  .figure-float {
+  .keychain-swing {
     animation: none;
   }
 }

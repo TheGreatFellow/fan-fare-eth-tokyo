@@ -172,7 +172,7 @@ export default function Home() {
       </main>
       <footer className="border-t border-line">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-8 text-sm text-ink-3 md:px-8">
-          <span>Fair Drop, built at ETHGlobal Tokyo 2026 with World ID and Uniswap v4.</span>
+          <span>Fair Drop, built at ETHGlobal Tokyo 2026 with World ID and Uniswap v4. Sample merch only; not affiliated with Evangelion&apos;s owners.</span>
           <Link href="/curve" className="hover:text-ink">The original curve drop</Link>
         </div>
       </footer>

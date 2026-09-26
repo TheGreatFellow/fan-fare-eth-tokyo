@@ -194,7 +194,7 @@ export default function AuctionPage() {
   async function claim() {
     const won = !!mine?.outcome;
     const ok = await send("Confirm in your wallet…", (w) => w({ ...auction, functionName: "claim", chainId: sepolia.id, account: address }));
-    if (ok) setAlert({ tone: "good", title: won ? "Claimed" : "Refunded", text: won ? "Your receipt for the figure is in your wallet, and the rest of your deposit is back. Redeem it with the maker to have the figure shipped." : "Your full deposit is back in your wallet." });
+    if (ok) setAlert({ tone: "good", title: won ? "Claimed" : "Refunded", text: won ? "Your receipt for the keychain is in your wallet, and the rest of your deposit is back. Redeem it with the maker to have the keychain shipped." : "Your full deposit is back in your wallet." });
   }
 
   // ---- The one action that matters right now, for this wallet. ----
@@ -314,7 +314,7 @@ export default function AuctionPage() {
 
           <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.08, ease: [0.16, 1, 0.3, 1] }} className="space-y-6">
             <div>
-              <h1 className="font-display text-5xl uppercase leading-[0.95] tracking-wide md:text-6xl">Limited collector figure</h1>
+              <h1 className="font-display text-5xl uppercase leading-[0.95] tracking-wide md:text-6xl">Evangelion holo keychain</h1>
               <p className="mt-3 max-w-[60ch] text-ink-2">
                 {supply.toString()} units. {fanUnits.toString()} raffled to fans at 定価 {yen(YEN_FOR_RESERVE)}. The other {(supply - fanUnits).toString()} go to the highest sealed bids, all at one price. One bid per verified human.
               </p>
@@ -339,15 +339,15 @@ export default function AuctionPage() {
 
         {owned.length > 0 && (
           <section className="mt-10">
-            <h2 className="font-display text-3xl uppercase tracking-wide">Your figures</h2>
-            <p className="mt-1 text-ink-2">Each on-chain receipt is a claim on one physical figure. The maker ships it when you redeem.</p>
+            <h2 className="font-display text-3xl uppercase tracking-wide">Your keychains</h2>
+            <p className="mt-1 text-ink-2">Each on-chain receipt is a claim on one physical keychain. The maker ships it when you redeem.</p>
             <ul className="mt-4 grid gap-3 sm:grid-cols-2">
               {owned.map(({ id, paid }) => (
                 <li key={id.toString()} className="panel flex items-center gap-4 p-4">
                   <Package size={28} className="text-accent" />
                   <div>
                     <div className="font-mono">Receipt #{id.toString()}</div>
-                    <div className="text-sm text-ink-2">Paid {yen(toYen(paid))}. Redeem with the maker to have the figure shipped.</div>
+                    <div className="text-sm text-ink-2">Paid {yen(toYen(paid))}. Redeem with the maker to have it shipped.</div>
                   </div>
                 </li>
               ))}
@@ -355,7 +355,8 @@ export default function AuctionPage() {
           </section>
         )}
         <p className="mt-10 font-mono text-xs text-ink-3">
-          Demo scale: {(Number(reserve) / 1e18).toString()} ETH on Sepolia is shown as {yen(YEN_FOR_RESERVE)}.
+          Demo scale: {(Number(reserve) / 1e18).toString()} ETH on Sepolia is shown as {yen(YEN_FOR_RESERVE)}. Sample merch for the demo: Evangelion is a
+          trademark of its owners, and this project is not affiliated with them.
         </p>
       </main>
 
