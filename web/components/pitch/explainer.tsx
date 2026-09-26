@@ -130,7 +130,7 @@ export function Explainer() {
               const lit = spin === b.id;
               const pays = fan ? RESERVE : won && step >= 4 ? CLEAR : null;
               return (
-                <motion.li key={b.id} layout transition={{ type: "spring", stiffness: 220, damping: 28 }} className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-3">
+                <motion.li key={b.id} layout transition={{ type: "spring", stiffness: 220, damping: 28 }} className="grid grid-cols-[4.5rem_minmax(0,1fr)_6.5rem] items-center gap-3">
                   <span className={`flex items-center gap-1.5 font-mono text-sm ${lit ? "text-fan" : "text-ink-2"}`}>
                     <User size={14} /> {b.id}
                   </span>
@@ -152,26 +152,26 @@ export function Explainer() {
                       animate={{ scaleX: pays ? pct(pays) : 0 }}
                       transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
                     />
-                    <span className="absolute inset-y-0 left-2.5 flex items-center gap-2 font-mono text-sm text-ink [text-shadow:0_1px_2px_rgba(0,0,0,0.7)]">
-                      {step === 0 ? (
-                        <>
-                          <LockSimple size={14} weight="bold" className="text-accent" /> sealed
-                        </>
-                      ) : (
-                        <>
-                          {yen(b.bid)}
-                          {pays !== null && <span className="text-ink/80">pays {yen(pays)}</span>}
-                          {below && <span className="text-ink-3">below 定価</span>}
-                        </>
-                      )}
-                    </span>
                   </div>
+                  <span className="font-mono text-sm leading-tight">
+                    {step === 0 ? (
+                      <span className="flex items-center gap-1.5 text-accent">
+                        <LockSimple size={14} weight="bold" /> sealed
+                      </span>
+                    ) : (
+                      <>
+                        <span className="text-ink">{yen(b.bid)}</span>
+                        {pays !== null && <span className="block text-xs" style={{ color }}>pays {yen(pays)}</span>}
+                        {below && <span className="block text-xs text-ink-3">below 定価</span>}
+                      </>
+                    )}
+                  </span>
                 </motion.li>
               );
             })}
           </ul>
             {/* Price lines over the lanes. */}
-            <div className="pointer-events-none absolute inset-y-0 right-0 left-[5.25rem]">
+            <div className="pointer-events-none absolute inset-y-0 right-[7.25rem] left-[5.25rem]">
               <Line show={step >= 2} x={pct(RESERVE)} color="var(--fan)" label="定価" dashed />
               <Line show={step >= 4} x={pct(CLEAR)} color="var(--accent)" label="clearing price" from={1} />
             </div>

@@ -427,7 +427,7 @@ function BidBoard(p: {
 
   return (
     <section>
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+      <div className={`${settled ? "mb-10" : "mb-4"} flex flex-wrap items-end justify-between gap-2`}>
         <h2 className="font-display text-3xl uppercase tracking-wide">
           {settled ? "Results" : "Sealed bids"} <span className="tabular text-ink-3">{p.rows.length}</span>
         </h2>
@@ -465,7 +465,7 @@ function BidBoard(p: {
           {settled && (
             <div className="pointer-events-none absolute inset-y-0 right-0 left-[7.25rem] sm:left-[9.75rem]">
               <Marker x={frac(YEN_FOR_RESERVE)} color="var(--fan)" dashed label={`定価 ${yen(YEN_FOR_RESERVE)}`} />
-              {p.auctionWinners > 0n && <Marker x={frac(p.toYen(p.clearing))} color="var(--accent)" label={`Clearing ${yen(p.toYen(p.clearing))}`} />}
+              {p.auctionWinners > 0n && p.clearing > p.reserve && <Marker x={frac(p.toYen(p.clearing))} color="var(--accent)" label={`Clearing ${yen(p.toYen(p.clearing))}`} top />}
             </div>
           )}
         </div>
@@ -504,24 +504,25 @@ function ResultBar({ r, you, frac, toYen, reserve }: { r: Row; you: boolean; fra
     <div className={`relative h-11 ${you ? "outline outline-1 outline-offset-2 outline-accent" : ""}`}>
       <motion.div
         className="absolute inset-y-0 left-0 w-full origin-left"
-        style={{ background: color, opacity: r.outcome ? 0.9 : 0.3 }}
+        style={{ background: color, opacity: r.outcome ? 0.5 : 0.22 }}
         initial={{ scaleX: 0 }}
         animate={{ scaleX: r.revealed ? frac : 0 }}
         transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
       />
-      <span className="absolute inset-y-0 left-3 flex items-center gap-2 font-mono text-sm text-ink [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]">
+      <div className="absolute inset-y-0 left-0 w-1" style={{ background: color }} />
+      <span className="absolute inset-y-0 left-3 flex items-center gap-2 font-mono text-sm text-ink [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">
         {r.revealed ? yen(toYen(r.amount)) : "never revealed"}
-        <span className="text-ink-2">{tag}</span>
+        <span className="text-ink/75">{tag}</span>
       </span>
     </div>
   );
 }
 
-function Marker({ x, color, label, dashed }: { x: number; color: string; label: string; dashed?: boolean }) {
+function Marker({ x, color, label, dashed, top }: { x: number; color: string; label: string; dashed?: boolean; top?: boolean }) {
   return (
     <motion.div className="absolute inset-y-0 left-0 w-full" initial={{ x: "0%" }} animate={{ x: `${x * 100}%` }} transition={{ duration: 1, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}>
       <div className={`absolute -top-2 -bottom-2 left-0 ${dashed ? "border-l-2 border-dashed" : "border-l-2"}`} style={{ borderColor: color }} />
-      <div className="absolute -bottom-7 left-0 -translate-x-1/2 whitespace-nowrap font-mono text-xs" style={{ color }}>
+      <div className={`absolute left-0 -translate-x-1/2 whitespace-nowrap font-mono text-xs ${top ? "-top-7" : "-bottom-7"}`} style={{ color }}>
         {label}
       </div>
     </motion.div>
