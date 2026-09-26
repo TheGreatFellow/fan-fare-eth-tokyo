@@ -1,9 +1,10 @@
 import "server-only";
-import { createPublicClient, http, type Address, type Hex } from "viem";
+import { createPublicClient, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
 import { DROP_ADDRESS, DROP_ID, DROP_VERIFIER, dropAbi } from "./drop";
 import { AUCTION_ADDRESS, AUCTION_ID } from "./auction";
+import { sepoliaTransport } from "./rpc";
 
 // Long enough to confirm a wallet popup and wait out a slow block; short enough that a leaked
 // voucher is useless soon. It can only ever buy for its own buyer and nullifier anyway.
@@ -35,7 +36,7 @@ export const voucherTypes = {
   ],
 } as const;
 
-const client = createPublicClient({ chain: sepolia, transport: http(process.env.SEPOLIA_RPC_URL) });
+const client = createPublicClient({ chain: sepolia, transport: sepoliaTransport(process.env.SEPOLIA_RPC_URL) });
 
 /** The contract is the source of truth for "already purchased" — it survives backend restarts. */
 export function isNullifierUsed(nullifier: bigint, target: Target = "drop"): Promise<boolean> {

@@ -2,17 +2,18 @@
 
 import { useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { WagmiProvider, createConfig, http } from "wagmi";
+import { WagmiProvider, createConfig } from "wagmi";
 import { injected } from "wagmi/connectors";
 import { sepolia } from "wagmi/chains";
+import { sepoliaTransport } from "@/lib/rpc";
 
-// Public endpoint by default; set NEXT_PUBLIC_SEPOLIA_RPC_URL to a dedicated one (e.g. Infura)
-// before judging, since public endpoints rate-limit under load. It ships to the browser.
+// NEXT_PUBLIC_SEPOLIA_RPC_URL (a dedicated endpoint, e.g. Alchemy) goes first, public endpoints
+// after it as fallbacks. It ships to the browser, so use a key made for that.
 export const wagmiConfig = createConfig({
   chains: [sepolia],
   connectors: [injected()],
   transports: {
-    [sepolia.id]: http(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com"),
+    [sepolia.id]: sepoliaTransport(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL),
   },
   ssr: true,
 });
