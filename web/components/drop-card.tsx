@@ -48,7 +48,7 @@ export function DropCard({ serial = "001", edition = "003", className = "" }: { 
           <Keychain className="mx-auto my-2 min-h-0 w-[88%] flex-1" />
           <div className="flex items-end justify-between">
             <div>
-              <div className="hud">定価</div>
+              <div className="hud">Retail (定価)</div>
               <div className="font-display text-3xl tabular">¥3,000</div>
             </div>
             <div className="text-right">

@@ -176,7 +176,7 @@ export default function AuctionPage() {
       setAlert({
         tone: "good",
         title: "Sealed",
-        text: `Your ${yen(bidNum)} bid is locked in. Nobody can see it, not even the maker, until you reveal it after bidding closes.`,
+        text: `Your ${yen(bidNum)} bid is locked in. Nobody can see it, not even the brand, until you reveal it after bidding closes.`,
       });
       resetForm();
     }
@@ -188,13 +188,13 @@ export default function AuctionPage() {
     const ok = await send("Confirm the reveal in your wallet…", (w) =>
       w({ ...auction, functionName: "reveal", chainId: sepolia.id, account: address, args: [BigInt(s.amount), s.secret] }),
     );
-    if (ok) setAlert({ tone: "good", title: "Revealed", text: `Your ${yen(toYen(BigInt(s.amount)))} bid is open. Results come when the maker settles.` });
+    if (ok) setAlert({ tone: "good", title: "Revealed", text: `Your ${yen(toYen(BigInt(s.amount)))} bid is open. Results come when the brand settles.` });
   }
 
   async function claim() {
     const won = !!mine?.outcome;
     const ok = await send("Confirm in your wallet…", (w) => w({ ...auction, functionName: "claim", chainId: sepolia.id, account: address }));
-    if (ok) setAlert({ tone: "good", title: won ? "Claimed" : "Refunded", text: won ? "Your receipt for the keychain is in your wallet, and the rest of your deposit is back. Redeem it with the maker to have the keychain shipped." : "Your full deposit is back in your wallet." });
+    if (ok) setAlert({ tone: "good", title: won ? "Claimed" : "Refunded", text: won ? "Your receipt for the keychain is in your wallet, and the rest of your deposit is back. Redeem it with the brand to have the keychain shipped." : "Your full deposit is back in your wallet." });
   }
 
   // ---- The one action that matters right now, for this wallet. ----
@@ -203,7 +203,7 @@ export default function AuctionPage() {
   else if (phase === "Bidding" && mine)
     action = (
       <Callout icon={<LockSimple size={22} weight="bold" />} title="Your sealed bid is in">
-        {myAmount !== undefined ? `You bid ${yen(toYen(myAmount))}. ` : ""}Come back to reveal it when the maker closes bidding.
+        {myAmount !== undefined ? `You bid ${yen(toYen(myAmount))}. ` : ""}Come back to reveal it when the brand closes bidding.
       </Callout>
     );
   else if (phase === "Bidding")
@@ -263,7 +263,7 @@ export default function AuctionPage() {
   else if (phase === "Reveal")
     action = (
       <Callout icon={<EyeSlash size={22} />} title={mine ? "Revealed" : "Reveal in progress"}>
-        Results arrive when the maker settles{settleIn > 0 ? `, in ${settleIn}s at the earliest` : ""}.
+        Results arrive when the brand settles{settleIn > 0 ? `, in ${settleIn}s at the earliest` : ""}.
       </Callout>
     );
   else if (mine && mine.revealed && !mine.claimed) {
@@ -316,7 +316,7 @@ export default function AuctionPage() {
             <div>
               <h1 className="font-display text-5xl uppercase leading-[0.95] tracking-wide md:text-6xl">Evangelion holo keychain</h1>
               <p className="mt-3 max-w-[60ch] text-ink-2">
-                {supply.toString()} units. {fanUnits.toString()} raffled to fans at 定価 {yen(YEN_FOR_RESERVE)}. The other {(supply - fanUnits).toString()} go to the highest sealed bids, all at one price. One bid per verified human.
+                {supply.toString()} units. {fanUnits.toString()} raffled to fans at the retail price (定価) of {yen(YEN_FOR_RESERVE)}. The other {(supply - fanUnits).toString()} go to the highest sealed bids, all at one price. One bid per verified human.
               </p>
             </div>
             <PhaseTrack phase={a.phase} revealLeft={settleIn} revealTotal={Number(a.minReveal)} />
@@ -331,23 +331,23 @@ export default function AuctionPage() {
 
         {a.phase === "Settled" && (
           <section className="mt-6 grid gap-px overflow-hidden border border-line bg-line sm:grid-cols-3">
-            <Stat label="Fan units at 定価" value={`${fanWinners} × ${yen(YEN_FOR_RESERVE)}`} />
+            <Stat label="Fan units at retail (定価)" value={`${fanWinners} × ${yen(YEN_FOR_RESERVE)}`} />
             <Stat label="Auction units" value={`${auctionWinners} × ${yen(toYen(auctionWinners > 0n ? clearing : reserve))}`} />
-            <Stat label="Above 定価, to the maker" value={yen(toYen(auctionWinners * (clearing - reserve)))} accent sub="the gap scalpers used to take" />
+            <Stat label="Above retail, to the brand" value={yen(toYen(auctionWinners * (clearing - reserve)))} accent sub="the gap scalpers used to take" />
           </section>
         )}
 
         {owned.length > 0 && (
           <section className="mt-10">
             <h2 className="font-display text-3xl uppercase tracking-wide">Your keychains</h2>
-            <p className="mt-1 text-ink-2">Each on-chain receipt is a claim on one physical keychain. The maker ships it when you redeem.</p>
+            <p className="mt-1 text-ink-2">Each on-chain receipt is a claim on one physical keychain. The brand ships it when you redeem.</p>
             <ul className="mt-4 grid gap-3 sm:grid-cols-2">
               {owned.map(({ id, paid }) => (
                 <li key={id.toString()} className="panel flex items-center gap-4 p-4">
                   <Package size={28} className="text-accent" />
                   <div>
                     <div className="font-mono">Receipt #{id.toString()}</div>
-                    <div className="text-sm text-ink-2">Paid {yen(toYen(paid))}. Redeem with the maker to have it shipped.</div>
+                    <div className="text-sm text-ink-2">Paid {yen(toYen(paid))}. Redeem with the brand to have it shipped.</div>
                   </div>
                 </li>
               ))}
@@ -434,7 +434,7 @@ function BidBoard(p: {
           {settled ? "Results" : "Sealed bids"} <span className="tabular text-ink-3">{p.rows.length}</span>
         </h2>
         <p className="text-sm text-ink-3">
-          {p.phase === "Bidding" ? "Amounts stay sealed. You see who bid, not how much." : p.phase === "Reveal" ? `${revealed} of ${p.rows.length} opened. Amounts publish at settlement.` : "Fan raffle at 定価 first. Everyone else pays the highest losing bid."}
+          {p.phase === "Bidding" ? "Amounts stay sealed. You see who bid, not how much." : p.phase === "Reveal" ? `${revealed} of ${p.rows.length} opened. Amounts publish at settlement.` : "Fan raffle at the retail price (定価) first. Everyone else pays the highest losing bid."}
         </p>
       </div>
       {rows.length === 0 ? (
@@ -466,7 +466,7 @@ function BidBoard(p: {
           </ul>
           {settled && (
             <div className="pointer-events-none absolute inset-y-0 right-0 left-[7.25rem] sm:left-[9.75rem]">
-              <Marker x={frac(YEN_FOR_RESERVE)} color="var(--fan)" dashed label={`定価 ${yen(YEN_FOR_RESERVE)}`} />
+              <Marker x={frac(YEN_FOR_RESERVE)} color="var(--fan)" dashed label={`Retail (定価) ${yen(YEN_FOR_RESERVE)}`} />
               {p.auctionWinners > 0n && p.clearing > p.reserve && <Marker x={frac(p.toYen(p.clearing))} color="var(--accent)" label={`Clearing ${yen(p.toYen(p.clearing))}`} top />}
             </div>
           )}
@@ -500,7 +500,7 @@ function SealedBar({ r, you, myAmount, toYen }: { r: Row; you: boolean; myAmount
 }
 
 function ResultBar({ r, you, frac, toYen, reserve }: { r: Row; you: boolean; frac: number; toYen: (w: bigint) => number; reserve: bigint }) {
-  const tag = !r.revealed ? "forfeited" : r.outcome === OUTCOME.fan ? "fan raffle, pays 定価" : r.outcome === OUTCOME.auction ? "won" : r.amount < reserve ? "below 定価" : "lost";
+  const tag = !r.revealed ? "forfeited" : r.outcome === OUTCOME.fan ? "fan raffle, pays retail" : r.outcome === OUTCOME.auction ? "won" : r.amount < reserve ? "below retail" : "lost";
   const color = r.outcome === OUTCOME.fan ? "var(--fan)" : r.outcome === OUTCOME.auction ? "var(--accent)" : "var(--ink-3)";
   return (
     <div className={`relative h-11 ${you ? "outline outline-1 outline-offset-2 outline-accent" : ""}`}>

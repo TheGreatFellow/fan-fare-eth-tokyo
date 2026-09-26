@@ -2,7 +2,7 @@ import Link from "next/link";
 import { SiteNav } from "@/components/chrome";
 import { Hero } from "@/components/pitch/hero";
 import { Explainer } from "@/components/pitch/explainer";
-import { TruthSlider } from "@/components/pitch/truth-slider";
+import { Strategies, VickreyDemo } from "@/components/pitch/vickrey";
 import { Gap, Sellout, SwapFlow, Sybil } from "@/components/pitch/scenes";
 import { Reveal, TitleCard } from "@/components/pitch/reveal";
 
@@ -18,7 +18,7 @@ export default function Home() {
         <Section>
           <div className="grid items-center gap-12 md:grid-cols-2">
             <TitleCard kanji="問題" title="Sold out in 30 seconds. Resold at 10x by lunch.">
-              Makers price limited editions low on purpose: 定価 is how fan culture says thank you. But when ten times more people want a figure than there are figures, first come, first served turns into a race, and bots are faster than people.
+              Brands price limited editions low on purpose: the retail price (定価) is how fan culture says thank you. But when ten times more people want a figure than there are figures, first come, first served turns into a race, and bots are faster than people.
             </TitleCard>
             <Reveal delay={0.1}>
               <Sellout />
@@ -29,7 +29,7 @@ export default function Home() {
         {/* Why */}
         <Section>
           <TitleCard kanji="差額" title="Scalping is a pricing bug.">
-            The gap between 定価 and what fans will really pay is real money, and somebody collects it. Today that&apos;s whoever refreshes fastest. We give it to the maker and keep 定価 for fans.
+            The gap between the retail price (定価) and what fans will really pay is real money, and somebody collects it. Today that&apos;s whoever refreshes fastest. We give it to the brand and keep the retail price for fans.
           </TitleCard>
           <div className="mt-12 grid items-start gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
             <Reveal>
@@ -40,7 +40,7 @@ export default function Home() {
                 {[
                   ["先着", "First come, first served", "A speed contest. Bots win."],
                   ["抽選", "Lottery", "A ticket contest. Multi-account farms win."],
-                  ["値上", "Just raise the price", "Fans get priced out, and the maker looks greedy."],
+                  ["値上", "Just raise the price", "Fans get priced out, and the brand looks greedy."],
                 ].map(([jp, name, why]) => (
                   <li key={name} className="flex gap-4 py-4">
                     <span className="w-12 shrink-0 font-jp text-2xl text-ink-3">{jp}</span>
@@ -55,18 +55,34 @@ export default function Home() {
           </div>
         </Section>
 
+        {/* Vickrey, the building block */}
+        <Section>
+          <TitleCard kanji="入札" title="First, the auction that rewards honesty.">
+            In a Vickrey auction (a sealed, second-price auction) the highest bid wins, but the winner pays the <em>second</em>-highest bid. William Vickrey won the 1996 Nobel prize in economics for showing why that makes bidding your true value the best strategy.
+          </TitleCard>
+          <div className="mt-12 grid items-start gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+            <Reveal>
+              <VickreyDemo />
+            </Reveal>
+            <Reveal delay={0.1}>
+              <Strategies />
+            </Reveal>
+          </div>
+        </Section>
+
         {/* What */}
         <Section className="text-center">
           <Reveal>
             <div className="hud !text-accent">The mechanism</div>
             <h2 className="mx-auto mt-4 max-w-[14ch] font-display text-[clamp(3rem,9vw,7rem)] uppercase leading-[0.9] tracking-wide">Proof-of-Fan Clearing</h2>
             <p className="mt-5 font-mono text-lg text-ink-2">One human. One sealed bid. One fair price.</p>
+            <p className="mx-auto mt-4 max-w-[52ch] text-ink-2">Vickrey&apos;s second-price rule, scaled up to a whole drop, with fans raffled in first.</p>
           </Reveal>
           <div className="mx-auto mt-16 grid max-w-5xl gap-px bg-line text-left md:grid-cols-3">
             {[
               ["一", "Prove you're one human", "World ID gives each person exactly one sealed bid. A bot farm gets one bid, same as you."],
-              ["二", "Fans first, at 定価", "Some units are raffled at 定価 among everyone who bid at least 定価. A bigger bid doesn't improve your odds."],
-              ["三", "One price for the rest", "The other units go to the highest bids, and every winner pays the same price: the highest losing bid."],
+              ["二", "Fans first, at retail (定価)", "Some units are raffled at the retail price among everyone who bid at least that much. A bigger bid doesn't improve your odds."],
+              ["三", "One price for the rest", "The other units go to the highest bids, and every winner pays the same price: the highest losing bid. That's the second-price rule for many units."],
             ].map(([n, title, text], i) => (
               <Reveal key={n} delay={i * 0.1} className="bg-bg p-7">
                 <div className="font-jp text-5xl text-accent">{n}</div>
@@ -85,26 +101,14 @@ export default function Home() {
           <Reveal className="mt-12">
             <Explainer />
           </Reveal>
-        </Section>
-
-        {/* Vickrey */}
-        <Section>
-          <TitleCard kanji="真値" title="Bid what it's worth. That's the whole strategy.">
-            This is a Vickrey auction, the design that earned William Vickrey the 1996 Nobel prize in economics. Your bid decides <em>whether</em> you win, never <em>what</em> you pay. So shading your bid can only hurt you. Try to beat it.
-          </TitleCard>
-          <div className="mt-12 grid items-start gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-            <Reveal>
-              <TruthSlider />
-            </Reveal>
-            <Reveal delay={0.1} className="space-y-6">
-              <Aside title="Why raffle first?">
-                If the raffle were among the auction&apos;s losers, bidding low on purpose would buy you a lottery ticket. Drawing fans before the auction means your bid never changes your raffle odds, so the honest bid stays the best bid.
-              </Aside>
-              <Aside title="Why one price?">
-                When everyone pays the highest losing bid, the price is set by the market, not by a guess, and a winner never regrets bidding high.
-              </Aside>
-            </Reveal>
-          </div>
+          <Reveal className="mt-12 grid gap-8 md:grid-cols-2">
+            <Aside title="Why raffle first?">
+              If the raffle were among the auction&apos;s losers, bidding low on purpose would buy you a lottery ticket. Drawing fans before the auction means your bid never changes your raffle odds, so the honest bid stays the best bid.
+            </Aside>
+            <Aside title="Why one price?">
+              It&apos;s the second-price rule for many units: every winner pays the highest losing bid. The market sets the price, and your own bid only decides whether you win.
+            </Aside>
+          </Reveal>
         </Section>
 
         {/* World ID */}
@@ -126,7 +130,7 @@ export default function Home() {
           <TitleCard kanji="転売" title="So what's left for a scalper?" />
           <Reveal className="mt-12">
             <div className="grid gap-px overflow-hidden border border-line bg-line md:grid-cols-3">
-              <Resale tone="bad" label="Today" buy="¥3,000 at 定価" sell="≈ ¥30,000 on Mercari" margin="¥27,000" note="margin per unit, times every bot account" />
+              <Resale tone="bad" label="Today" buy="¥3,000, the retail price (定価)" sell="≈ ¥30,000 on Mercari" margin="¥27,000" note="margin per unit, times every bot account" />
               <Resale label="Auction unit" buy="¥6,000, the clearing price" sell="Everyone who'd pay more already won one" margin="≈ ¥0" note="margin: the price already is the market price" />
               <Resale tone="good" label="Fan unit" buy="¥3,000, by raffle" sell="One per human, drawn blind" margin="1 flip" note="at most, by one lucky fan. Bots can't farm the raffle." />
             </div>
@@ -165,7 +169,7 @@ export default function Home() {
             <p className="mx-auto mt-5 max-w-[48ch] text-lg text-ink-2">Verify with World ID, seal a bid, and watch it clear.</p>
             <div className="mt-9 flex flex-wrap items-center justify-center gap-6">
               <Link href="/auction" className="btn btn-primary text-base">Enter the drop</Link>
-              <Link href="/admin" className="text-ink-2 underline-offset-4 hover:text-ink hover:underline">Run it as the maker</Link>
+              <Link href="/admin" className="text-ink-2 underline-offset-4 hover:text-ink hover:underline">Run it as the brand</Link>
             </div>
           </Reveal>
         </Section>

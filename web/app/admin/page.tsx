@@ -30,7 +30,7 @@ export default function AdminPage() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 md:px-8">
           <div className="flex items-center gap-4">
             <Brand />
-            <span className="hidden border border-accent/40 bg-accent/10 px-2 py-0.5 font-mono text-xs uppercase tracking-[0.2em] text-accent sm:inline">Maker console 管制</span>
+            <span className="hidden border border-accent/40 bg-accent/10 px-2 py-0.5 font-mono text-xs uppercase tracking-[0.2em] text-accent sm:inline">Brand console 管制</span>
           </div>
           <div className="flex items-center gap-4">
             <span className="hidden font-mono text-xs text-ink-3 lg:inline">
@@ -60,11 +60,11 @@ function Gate({ connected, maker }: { connected: boolean; maker: string }) {
     <div className="mx-auto max-w-lg border border-accent/40 bg-panel p-8 text-center">
       <LockSimple size={40} className="mx-auto text-accent" />
       <div className="mt-4 font-jp text-4xl text-accent">権限なし</div>
-      <h1 className="mt-2 font-display text-3xl uppercase tracking-wide">Maker access only</h1>
+      <h1 className="mt-2 font-display text-3xl uppercase tracking-wide">Brand access only</h1>
       <p className="mt-3 text-ink-2">
-        {connected ? "The acting wallet isn't this drop's maker. Pick the maker account in the wallet menu above, or add it with +." : "Connect the maker wallet to run this drop."}
+        {connected ? "The acting wallet isn't this drop's brand wallet. Pick the brand account in the wallet menu above, or add it with +." : "Connect the brand wallet to run this drop."}
       </p>
-      <p className="mt-4 font-mono text-sm text-ink-3">maker {short(maker)}</p>
+      <p className="mt-4 font-mono text-sm text-ink-3">brand wallet {short(maker)}</p>
       <Link href="/auction" className="btn btn-ghost mt-6">
         Go to the drop page
       </Link>
@@ -130,7 +130,7 @@ function Console({ a, now, busy, onAction }: { a: Ready; now: number; busy: stri
                   <div>
                     <h2 className="font-display text-3xl uppercase tracking-wide">Settled</h2>
                     <p className="mt-1 max-w-[55ch] text-ink-2">
-                      {fanWinners.toString()} fan unit{fanWinners === 1n ? "" : "s"} at 定価, {auctionWinners.toString()} at the clearing price. Bidders claim their units and refunds themselves.
+                      {fanWinners.toString()} fan unit{fanWinners === 1n ? "" : "s"} at the retail price (定価), {auctionWinners.toString()} at the clearing price. Bidders claim their units and refunds themselves.
                     </p>
                     <button className="btn btn-primary mt-4" disabled={!!busy || makerFunds === 0n} onClick={() => onAction("withdraw", "Withdrawing…")}>
                       <HandCoins size={18} weight="bold" /> {busy ?? (makerFunds > 0n ? `Withdraw ${yen(toYen(makerFunds))}` : "Proceeds withdrawn")}
@@ -147,7 +147,7 @@ function Console({ a, now, busy, onAction }: { a: Ready; now: number; busy: stri
           <Readout icon={<Users size={18} />} label="Bidders" value={rows.length.toString()} />
           <Readout icon={<Eye size={18} />} label="Revealed" value={`${revealed}/${rows.length}`} />
           <Readout icon={<LockSimple size={18} />} label="Escrow held" value={yen(toYen(escrow))} />
-          <Readout icon={<Coins size={18} />} label="Above 定価" value={a.phase === "Settled" ? yen(toYen(gap)) : "at settle"} accent={a.phase === "Settled"} />
+          <Readout icon={<Coins size={18} />} label="Above retail" value={a.phase === "Settled" ? yen(toYen(gap)) : "at settle"} accent={a.phase === "Settled"} />
         </section>
 
         {/* Roster. The maker sees what the chain shows: no amounts until bidders open them. */}
@@ -161,7 +161,7 @@ function Console({ a, now, busy, onAction }: { a: Ready; now: number; busy: stri
           ) : (
             <ul className="divide-y divide-line">
               {rows.map((r, i) => {
-                const outcome = a.phase !== "Settled" ? null : !r.revealed ? ["forfeit", "text-bad"] : r.outcome === OUTCOME.fan ? ["fan 定価", "text-fan"] : r.outcome === OUTCOME.auction ? ["won", "text-accent"] : ["lost", "text-ink-3"];
+                const outcome = a.phase !== "Settled" ? null : !r.revealed ? ["forfeit", "text-bad"] : r.outcome === OUTCOME.fan ? ["fan, retail", "text-fan"] : r.outcome === OUTCOME.auction ? ["won", "text-accent"] : ["lost", "text-ink-3"];
                 return (
                   <motion.li key={r.bidder} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }} className="grid grid-cols-[2rem_minmax(0,1fr)_auto_auto] items-center gap-3 px-4 py-2.5 font-mono text-sm">
                     <span className="text-ink-3 tabular">{String(i + 1).padStart(2, "0")}</span>
@@ -185,7 +185,7 @@ function Console({ a, now, busy, onAction }: { a: Ready; now: number; busy: stri
           <dl className="mt-4 space-y-3 text-sm">
             <Cfg k="Units" v={supply.toString()} />
             <Cfg k="Fan units (raffle)" v={fanUnits.toString()} />
-            <Cfg k="定価 (reserve)" v={yen(YEN_FOR_RESERVE)} />
+            <Cfg k="Retail price (定価)" v={yen(YEN_FOR_RESERVE)} />
             <Cfg k="Min reveal" v={`${total}s`} />
             <Cfg k="One bid per" v="World ID" />
           </dl>

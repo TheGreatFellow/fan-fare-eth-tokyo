@@ -5,7 +5,7 @@ import { AnimatePresence, motion, useInView, useReducedMotion } from "motion/rea
 import { ArrowRight, Robot, Storefront, User, Wallet } from "@phosphor-icons/react";
 
 /** Runs `steps` on a loop while the element is on screen. Returns the current step. */
-function useLoop(steps: number[], ref: React.RefObject<Element | null>) {
+export function useLoop(steps: number[], ref: React.RefObject<Element | null>) {
   const reduce = useReducedMotion();
   const inView = useInView(ref, { amount: 0.4 });
   const [i, setI] = useState(reduce ? steps.length - 1 : 0);
@@ -29,7 +29,7 @@ export function Sellout() {
   return (
     <div ref={ref} className="border border-line-strong bg-panel p-5">
       <div className="mb-4 flex items-center justify-between font-mono text-sm">
-        <span className="text-ink-2">Limited drop · 12 units · 定価 ¥3,000</span>
+        <span className="text-ink-2">Limited drop · 12 units · retail (定価) ¥3,000</span>
         <span className={step >= 1 ? "text-bad" : "text-fan"}>{step === 0 ? "00:00 opens" : step === 1 ? "00:28" : "SOLD OUT 00:30"}</span>
       </div>
       <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
@@ -85,7 +85,7 @@ export function Gap() {
       </div>
       <div className="flex h-24 w-full">
         <div className="flex basis-[12%] flex-col justify-center bg-fan/80 px-2 text-accent-ink">
-          <span className="font-mono text-[11px] font-semibold">定価</span>
+          <span className="font-mono text-[11px] font-semibold">retail</span>
           <span className="font-display text-lg">¥3k</span>
         </div>
         <motion.div className="relative flex-1 overflow-hidden" initial={false} animate={{ backgroundColor: fair ? "rgba(255,91,31,0.85)" : "rgba(255,77,94,0.25)" }} transition={{ duration: 0.6 }}>
@@ -94,7 +94,7 @@ export function Gap() {
             <motion.div key={String(fair)} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }} transition={{ duration: 0.35 }} className={`relative flex h-full items-center gap-3 px-4 ${fair ? "text-accent-ink" : "text-bad"}`}>
               {fair ? <Storefront size={32} weight="bold" /> : <Robot size={32} weight="bold" />}
               <div>
-                <div className="font-display text-2xl uppercase">{fair ? "To the maker" : "To the scalper"}</div>
+                <div className="font-display text-2xl uppercase">{fair ? "To the brand" : "To the scalper"}</div>
                 <div className="font-mono text-xs">the gap, up to ¥27,000 a unit</div>
               </div>
             </motion.div>
@@ -103,7 +103,7 @@ export function Gap() {
       </div>
       <div className="mt-2 flex justify-between font-mono text-[11px] text-ink-3">
         <span>¥0</span>
-        <span>what fans will actually pay ≈ ¥30,000</span>
+        <span>retail price (定価) ¥3,000 · what fans will actually pay ≈ ¥30,000</span>
       </div>
     </div>
   );

@@ -23,7 +23,7 @@ export function Brand() {
 const LINKS = [
   { href: "/#how", label: "How it works" },
   { href: "/auction", label: "The drop" },
-  { href: "/admin", label: "Maker console" },
+  { href: "/admin", label: "Brand console" },
 ];
 
 export function SiteNav({ right }: { right?: React.ReactNode }) {
@@ -86,7 +86,7 @@ export function WalletBar({ wallet, maker, onPick }: { wallet: Wallet; maker?: s
         {(wallet.addresses ?? [wallet.address]).map((a) => (
           <option key={a} value={a}>
             {short(a)}
-            {same(a, maker) ? "  (maker)" : ""}
+            {same(a, maker) ? "  (brand)" : ""}
           </option>
         ))}
       </select>

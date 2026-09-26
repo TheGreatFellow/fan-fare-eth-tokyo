@@ -25,10 +25,10 @@ const ELIGIBLE = BIDDERS.filter((b) => b.bid >= RESERVE).map((b) => b.id);
 const STEPS = [
   { key: "Seal", jp: "封", text: "Eight fans each send one sealed bid. The bot farm tries fifty wallets, but it's one human, so World ID lets in one bid." },
   { key: "Reveal", jp: "開", text: "Bidding closes and everyone opens their envelope. Nobody could see a bid before this, so nobody could game it." },
-  { key: "Raffle", jp: "抽", text: "Fan units go first: 2 are drawn at random among bids at or above 定価, and they pay 定価. Bidding higher doesn't improve your odds." },
+  { key: "Raffle", jp: "抽", text: "Fan units go first: 2 are drawn at random among bids at or above the retail price (定価), and they pay retail. Bidding higher doesn't improve your odds." },
   { key: "Rank", jp: "順", text: "The other 3 units go to the 3 highest remaining bids." },
   { key: "Clear", jp: "価", text: "Every winner pays one price: the highest losing bid, ¥6,000. Haru bid ¥15,000 and still pays ¥6,000." },
-  { key: "Settle", jp: "済", text: "The maker gets ¥24,000 instead of ¥15,000. Fans still got 定価. And no unit is left underpriced for a scalper to flip." },
+  { key: "Settle", jp: "済", text: "The brand gets ¥24,000 instead of ¥15,000. Fans still paid retail. And no unit is left underpriced for a scalper to flip." },
 ];
 
 const yen = (n: number) => `¥${n.toLocaleString("ja-JP")}`;
@@ -162,7 +162,7 @@ export function Explainer() {
                       <>
                         <span className="text-ink">{yen(b.bid)}</span>
                         {pays !== null && <span className="block text-xs" style={{ color }}>pays {yen(pays)}</span>}
-                        {below && <span className="block text-xs text-ink-3">below 定価</span>}
+                        {below && <span className="block text-xs text-ink-3">below retail</span>}
                       </>
                     )}
                   </span>
@@ -172,7 +172,7 @@ export function Explainer() {
           </ul>
             {/* Price lines over the lanes. */}
             <div className="pointer-events-none absolute inset-y-0 right-[7.25rem] left-[5.25rem]">
-              <Line show={step >= 2} x={pct(RESERVE)} color="var(--fan)" label="定価" dashed />
+              <Line show={step >= 2} x={pct(RESERVE)} color="var(--fan)" label="retail (定価)" dashed />
               <Line show={step >= 4} x={pct(CLEAR)} color="var(--accent)" label="clearing price" from={1} />
             </div>
           </div>
@@ -189,7 +189,7 @@ export function Explainer() {
             </motion.div>
           </AnimatePresence>
           <div className="space-y-2 font-mono text-xs text-ink-3">
-            <Legend color="var(--fan)" label="fan raffle, pays 定価" />
+            <Legend color="var(--fan)" label="fan raffle, pays retail (定価)" />
             <Legend color="var(--accent)" label="auction winner, pays clearing price" />
             <Legend color="var(--ink-3)" label="didn't win, full refund" />
           </div>
@@ -200,9 +200,9 @@ export function Explainer() {
         {step === STEPS.length - 1 && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden border-t border-line">
             <div className="grid grid-cols-2 gap-px bg-line md:grid-cols-4">
-              <Tally label="Fans at 定価" value="2 × ¥3,000" />
+              <Tally label="Fans at retail" value="2 × ¥3,000" />
               <Tally label="Auction winners" value="3 × ¥6,000" />
-              <Tally label="Maker receives" value="¥24,000" sub="vs ¥15,000 all at 定価" accent />
+              <Tally label="Brand receives" value="¥24,000" sub="vs ¥15,000 all at retail" accent />
               <Tally label="Left for scalpers" value="¥0" sub="price already = market" />
             </div>
           </motion.div>

@@ -32,13 +32,17 @@ export function Hero() {
             <span className="text-ink">fan·fare</span> <span className="text-ink-3">/ˈfan-fer/ n.</span>{" "}
             <span className="text-ink-3">1. a flourish of trumpets.</span> 2. <span className="text-accent">the fair fare for fans.</span>
           </motion.p>
-          <motion.h1 {...up(0.08)} className="mt-5 font-display text-[clamp(3.2rem,8vw,6.5rem)] uppercase leading-[0.92] tracking-wide">
-            Fans pay <span className="font-jp normal-case text-fan">定価</span>.
+          <motion.h1 {...up(0.08)} className="mt-9 font-display text-[clamp(3.2rem,8vw,6.5rem)] uppercase leading-[0.92] tracking-wide">
+            Fans pay{" "}
+            <ruby className="font-jp normal-case text-fan">
+              定価<rt className="font-mono text-[0.16em] tracking-[0.2em] uppercase text-ink-2">retail price</rt>
+            </ruby>
+            .
             <br />
             Scalpers get <span className="text-accent">nothing</span>.
           </motion.h1>
           <motion.p {...up(0.18)} className="mt-6 max-w-[46ch] text-lg leading-relaxed text-ink-2">
-            Limited drops with one sealed bid per verified human, fan units raffled at 定価, and one fair price for the rest.
+            Limited drops with one sealed bid per verified human, fan units raffled at the retail price (定価), and one fair price for the rest.
           </motion.p>
           <motion.div {...up(0.28)} className="mt-9 flex flex-wrap gap-3">
             <Link href="/auction" className="btn btn-primary group text-base">
