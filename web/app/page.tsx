@@ -56,11 +56,11 @@ export default function Home() {
         </Section>
 
         {/* Vickrey, the building block */}
-        <Section>
-          <TitleCard kanji="入札" title="First, the auction that rewards honesty.">
-            In a Vickrey auction (a sealed, second-price auction) the highest bid wins, but the winner pays the <em>second</em>-highest bid. William Vickrey won the 1996 Nobel prize in economics for showing why that makes bidding your true value the best strategy.
+        <Section id="vickrey" className="md:!py-16">
+          <TitleCard compact kanji="入札" title="First, the auction that rewards honesty.">
+            In a Vickrey auction (sealed, second-price) the highest bid wins, but the winner pays the <em>second</em>-highest bid. It won William Vickrey the 1996 Nobel prize in economics.
           </TitleCard>
-          <div className="mt-12 grid items-start gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          <div className="mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
             <Reveal>
               <VickreyDemo />
             </Reveal>

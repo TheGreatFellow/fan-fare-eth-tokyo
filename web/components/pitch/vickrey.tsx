@@ -1,9 +1,8 @@
 "use client";
 
-import { useRef } from "react";
-import { AnimatePresence, motion } from "motion/react";
-import { ArrowDown, ArrowUp, CheckCircle, LockSimple, Trophy, User } from "@phosphor-icons/react";
-import { useLoop } from "./scenes";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useInView, useReducedMotion } from "motion/react";
+import { ArrowDown, ArrowUp, CheckCircle, LockSimple, Pause, Play, Trophy, User } from "@phosphor-icons/react";
 
 // One item, four sealed bids. Highest bid wins; the winner pays the second-highest bid.
 const MAX = 14000;
@@ -15,7 +14,12 @@ const BIDS = [
 ];
 const WINNER = "aiko";
 const PRICE = 9000; // ben's bid, the second-highest
-const STEPS = [1900, 1900, 2100, 5200]; // sealed, open, winner, price
+const STEPS = [
+  { key: "Sealed", ms: 2200 },
+  { key: "Open", ms: 2200 },
+  { key: "Winner", ms: 2400 },
+  { key: "Price", ms: 5200 },
+];
 const CAPTIONS = [
   "Four collectors seal one bid each for a single item. Nobody sees anyone else's.",
   "Bidding closes and the bids open.",
@@ -26,16 +30,43 @@ const yen = (n: number) => `¥${n.toLocaleString("ja-JP")}`;
 
 export function VickreyDemo() {
   const ref = useRef<HTMLDivElement>(null);
-  const step = useLoop(STEPS, ref);
+  const reduce = useReducedMotion();
+  const inView = useInView(ref, { amount: 0.4 });
+  const [step, setStep] = useState(0);
+  const [playing, setPlaying] = useState(true);
+  // Autoplay while on screen; clicking a step pauses it so the presenter sets the pace.
+  useEffect(() => {
+    if (!inView || !playing || reduce) return;
+    const t = setTimeout(() => setStep((s) => (s + 1) % STEPS.length), STEPS[step].ms);
+    return () => clearTimeout(t);
+  }, [inView, playing, reduce, step]);
   const order = step >= 2 ? [...BIDS].sort((a, b) => b.bid - a.bid) : BIDS;
 
   return (
-    <div ref={ref} className="border border-line-strong bg-panel p-5 md:p-7">
-      <div className="mb-4 flex items-center justify-between font-mono text-sm">
-        <span className="text-ink-2">1 item · 4 sealed bids</span>
-        <span className="text-accent">second-price rule</span>
+    <div ref={ref} className="border border-line-strong bg-panel">
+      <div className="flex items-stretch border-b border-line">
+        <button onClick={() => setPlaying((p) => !p)} className="grid w-12 shrink-0 place-items-center border-r border-line text-ink-2 hover:text-ink" aria-label={playing ? "Pause" : "Play"}>
+          {playing && !reduce ? <Pause size={18} weight="fill" /> : <Play size={18} weight="fill" />}
+        </button>
+        <div className="grid flex-1 grid-cols-4">
+          {STEPS.map((s, i) => (
+            <button
+              key={s.key}
+              onClick={() => {
+                setStep(i);
+                setPlaying(false);
+              }}
+              className={`relative py-3 font-mono text-xs uppercase tracking-[0.12em] transition-colors hover:text-ink ${i === step ? "text-accent" : i < step ? "text-ink-2" : "text-ink-3"}`}
+            >
+              <span className="mr-1.5 text-ink-3">{i + 1}</span>
+              {s.key}
+              {i === step && <motion.div layoutId="vickrey-step" className="absolute inset-x-0 bottom-0 h-0.5 bg-accent" />}
+            </button>
+          ))}
+        </div>
       </div>
-      <div className="relative">
+      <div className="p-5 md:px-7">
+        <div className="relative mb-7">
         <ul className="space-y-2">
           {order.map((b) => {
             const won = b.id === WINNER && step >= 2;
@@ -83,8 +114,9 @@ export function VickreyDemo() {
             <div className="absolute -bottom-6 left-0 -translate-x-1/2 whitespace-nowrap font-mono text-[11px] text-ink">price = 2nd-highest bid</div>
           </motion.div>
         </div>
+        </div>
       </div>
-      <div className="mt-9 min-h-14">
+      <div className="min-h-14 px-5 pb-5 md:px-7">
         <AnimatePresence mode="wait">
           <motion.p key={step} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="text-ink-2">
             {CAPTIONS[step]}
@@ -117,11 +149,11 @@ export function Strategies() {
   return (
     <ul className="divide-y divide-line border-y border-line">
       {rows.map((r) => (
-        <li key={r.title} className="flex gap-4 py-5">
+        <li key={r.title} className="flex gap-3.5 py-3.5">
           <div className="mt-0.5 shrink-0">{r.icon}</div>
           <div>
-            <h3 className="font-display text-2xl uppercase tracking-wide">{r.title}</h3>
-            <p className="mt-1 leading-relaxed text-ink-2">{r.text}</p>
+            <h3 className="font-display text-xl uppercase tracking-wide">{r.title}</h3>
+            <p className="mt-0.5 text-[0.95rem] leading-relaxed text-ink-2">{r.text}</p>
           </div>
         </li>
       ))}
