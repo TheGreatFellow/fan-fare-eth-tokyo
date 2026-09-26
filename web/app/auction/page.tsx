@@ -194,7 +194,7 @@ export default function AuctionPage() {
   async function claim() {
     const won = !!mine?.outcome;
     const ok = await send("Confirm in your wallet…", (w) => w({ ...auction, functionName: "claim", chainId: sepolia.id, account: address }));
-    if (ok) setAlert({ tone: "good", title: won ? "Claimed" : "Refunded", text: won ? "Your unit is in your wallet, and the rest of your deposit is back." : "Your full deposit is back in your wallet." });
+    if (ok) setAlert({ tone: "good", title: won ? "Claimed" : "Refunded", text: won ? "Your receipt for the figure is in your wallet, and the rest of your deposit is back. Redeem it with the maker to have the figure shipped." : "Your full deposit is back in your wallet." });
   }
 
   // ---- The one action that matters right now, for this wallet. ----
@@ -339,14 +339,15 @@ export default function AuctionPage() {
 
         {owned.length > 0 && (
           <section className="mt-10">
-            <h2 className="font-display text-3xl uppercase tracking-wide">Your units</h2>
+            <h2 className="font-display text-3xl uppercase tracking-wide">Your figures</h2>
+            <p className="mt-1 text-ink-2">Each on-chain receipt is a claim on one physical figure. The maker ships it when you redeem.</p>
             <ul className="mt-4 grid gap-3 sm:grid-cols-2">
               {owned.map(({ id, paid }) => (
                 <li key={id.toString()} className="panel flex items-center gap-4 p-4">
                   <Package size={28} className="text-accent" />
                   <div>
-                    <div className="font-mono">Unit #{id.toString()}</div>
-                    <div className="text-sm text-ink-2">Paid {yen(toYen(paid))}. Redeem it with the maker for the figure.</div>
+                    <div className="font-mono">Receipt #{id.toString()}</div>
+                    <div className="text-sm text-ink-2">Paid {yen(toYen(paid))}. Redeem with the maker to have the figure shipped.</div>
                   </div>
                 </li>
               ))}

@@ -176,13 +176,23 @@ body::after {
 .blink {
   animation: blink 1.2s steps(2, jump-none) infinite;
 }
+@keyframes float {
+  50% {
+    transform: translateY(-4px);
+  }
+}
+.figure-float {
+  transform-box: fill-box;
+  animation: float 3.6s ease-in-out infinite;
+}
 
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
   .hazard::before,
-  .blink {
+  .blink,
+  .figure-float {
     animation: none;
   }
 }
