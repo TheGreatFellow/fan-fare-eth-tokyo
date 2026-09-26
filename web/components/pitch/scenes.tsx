@@ -81,7 +81,7 @@ export function Gap() {
     <div ref={ref} className="border border-line-strong bg-panel p-5 md:p-7">
       <div className="mb-6 flex gap-1 font-mono text-xs uppercase tracking-[0.12em]">
         <span className={`px-3 py-1.5 transition-colors ${!fair ? "bg-bad/20 text-bad" : "text-ink-3"}`}>Today</span>
-        <span className={`px-3 py-1.5 transition-colors ${fair ? "bg-accent/20 text-accent" : "text-ink-3"}`}>Fair Drop</span>
+        <span className={`px-3 py-1.5 transition-colors ${fair ? "bg-accent/20 text-accent" : "text-ink-3"}`}>Fanfare</span>
       </div>
       <div className="flex h-24 w-full">
         <div className="flex basis-[12%] flex-col justify-center bg-fan/80 px-2 text-accent-ink">

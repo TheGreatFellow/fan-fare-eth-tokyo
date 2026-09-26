@@ -28,9 +28,10 @@ export function Hero() {
       </motion.div>
       <div className="relative mx-auto grid min-h-[calc(100dvh-4rem)] max-w-7xl items-center gap-12 px-4 py-12 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] md:px-8 md:py-16">
         <div>
-          <motion.div {...up(0)} className="hud !text-accent">
-            Proof-of-Fan Clearing
-          </motion.div>
+          <motion.p {...up(0)} className="font-mono text-sm text-ink-2">
+            <span className="text-ink">fan·fare</span> <span className="text-ink-3">/ˈfan-fer/ n.</span>{" "}
+            <span className="text-ink-3">1. a flourish of trumpets.</span> 2. <span className="text-accent">the fair fare for fans.</span>
+          </motion.p>
           <motion.h1 {...up(0.08)} className="mt-5 font-display text-[clamp(3.2rem,8vw,6.5rem)] uppercase leading-[0.92] tracking-wide">
             Fans pay <span className="font-jp normal-case text-fan">定価</span>.
             <br />

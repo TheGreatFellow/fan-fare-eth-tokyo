@@ -1,11 +1,13 @@
-# Fair Drop
+# Fanfare
+
+*fan·fare, n. 2. the fair fare for fans.*
 
 **Limited-edition merch at the normal price for early fans. After that, demand sets the price —
 and the markup goes to the maker, not to scalpers.**
 
 ETHGlobal Tokyo 2026 · built solo · Sepolia · World ID 4.0
 
-- **Live demo:** [fair-drop-sable.vercel.app](https://fair-drop-sable.vercel.app) — World ID in staging: verify with the [simulator](https://simulator.worldcoin.org)
+- **Live demo:** [fanfare-drop.vercel.app](https://fanfare-drop.vercel.app) — World ID in sandbox: verify with the [World ID (Sandbox) app](https://docs.world.org/world-id/sandbox/sandbox-access)
 - **Contract:** [`0x897d36a3…eb9d3` on Sepolia](https://sepolia.etherscan.io/address/0x897d36a3d028776c3cdfc2e5a468544fdd1eb9d3#code) (verified)
 - **World ID integration debrief:** [`docs/world-debrief.md`](docs/world-debrief.md)
 
@@ -98,8 +100,8 @@ IDKit 4.3, World ID 4.0, server-side verification through `POST /api/v4/verify/{
 beyond "World said yes", each closing a specific hole:
 
 - the proof's signal must be the buyer's wallet, so a proof can't be replayed for another wallet;
-- the environment is pinned in both request and response, because anyone can mint unlimited
-  staging identities in the simulator;
+- the environment is pinned in both request and response, because staging and sandbox identities
+  are test identities and must never pass in production;
 - the required credential is enforced;
 - the RP ID comes from server config, never the client;
 - nullifiers are compared as numbers, so `0x04e5` and `0x4e5` can't count as two people.
@@ -124,8 +126,10 @@ npm test                    # backend tests
 npm run dev                 # http://localhost:3000
 ```
 
-World ID runs in `staging` for development: verify using the web simulator at
-[simulator.worldcoin.org](https://simulator.worldcoin.org).
+World ID runs in `sandbox` for development and the demo: verify with the World ID (Sandbox) app
+([setup](https://docs.world.org/world-id/sandbox/sandbox-access)). Proofs go to the same production
+verify endpoint. `staging` (the web simulator) still works, but needs a 24h staging window token
+(`node web/scripts/open-staging-window.mjs`).
 
 **Test mode.** Setting `ALLOW_UNVERIFIED_TEST_BUYS=true` shows a switch to turn World ID off, so
 one wallet can buy repeatedly and exercise the curve and sell-back. It removes the one-per-person
@@ -136,12 +140,18 @@ then update `deployments/sepolia.json` and run `npm run gen:drop` in `web/`.
 
 ## Known limitations
 
-- **One simulated person on staging.** For World ID 4.0, the simulator always returns the same
-  identity, so a second buyer can't be tested there (debrief item 11).
+- **Sandbox, not the simulator.** The staging simulator only ever returned one v4 person (debrief
+  item 11) and then hit a bug, so the demo moved to World's sandbox environment.
 - **Some smart-account wallets can't receive units.** `buy()` mints with `_safeMint`; an EIP-7702
   smart account whose code doesn't accept ERC-721s makes the purchase revert.
 - **Yen at demo scale.** Sepolia prices are tiny, so the page shows yen at a fixed, labelled scale
   (0.0002 ETH = ¥3,000).
+
+## Name
+
+Formerly *Fair Drop*. On-chain identifiers that are already deployed or registered with World keep
+the old name: drop IDs such as `fair-drop/auction-1`, the World action `fair-drop-demo-1`, and the
+contracts' token names.
 
 ## AI attribution
 
@@ -163,5 +173,5 @@ Studied for patterns and pitfalls; no code was copied.
   snake_case gotcha.
 - [`worldcoin/simulator`](https://github.com/worldcoin/simulator) source — explained why staging is
   one v4 person.
-- [Unisocks](https://github.com/Uniswap/unisocks) — proved curve pricing for merch in 2019. Fair Drop
+- [Unisocks](https://github.com/Uniswap/unisocks) — proved curve pricing for merch in 2019. Fanfare
   differs with a fixed fan price first and one unit per person.

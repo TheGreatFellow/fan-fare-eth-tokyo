@@ -10,8 +10,11 @@ import { same, short, type useActingWallet } from "@/lib/use-auction";
 
 export function Brand() {
   return (
-    <Link href="/" className="group flex items-baseline gap-2" aria-label="Fair Drop home">
-      <span className="font-display text-2xl uppercase tracking-wide">Fair Drop</span>
+    // FAN + FARE: the fair fare for fans. 公平 means "fair".
+    <Link href="/" className="group flex items-baseline gap-2" aria-label="Fanfare home">
+      <span className="font-display text-2xl uppercase tracking-wide">
+        Fan<span className="text-accent">fare</span>
+      </span>
       <span className="font-jp text-lg text-accent transition-transform group-hover:-translate-y-0.5">公平</span>
     </Link>
   );

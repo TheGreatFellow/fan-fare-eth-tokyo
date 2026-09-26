@@ -73,8 +73,8 @@ type VerifyResult = { identifier?: string; success?: boolean; nullifier?: string
  *
  * Checks beyond "World said yes", each closing a specific hole:
  *  - the proof's signal is the buyer's wallet, so a proof can't be replayed for another wallet;
- *  - the environment matches ours, because anyone can mint unlimited staging identities in the
- *    simulator, and those must never pass in production;
+ *  - the environment matches ours, because staging and sandbox identities are test identities,
+ *    and those must never pass in production;
  *  - the credential is the one we require, so a weaker one can't stand in for it.
  */
 export async function verifyProof(result: IDKitResult, buyer: Address): Promise<bigint> {
@@ -106,9 +106,10 @@ export async function verifyProof(result: IDKitResult, buyer: Address): Promise<
 
   // Since 2026-09-25 World refuses staging proofs unless the app's team opened a 24h staging window
   // (portal MCP tool set_world_id_staging_verification) and the call carries the token it issued.
-  // Never sent for production: that's what keeps simulator identities out of a production drop.
+  // Staging only: sandbox proofs go to the same endpoint with no token, and production never
+  // carries one, which keeps simulator identities out of a production drop.
   const headers: Record<string, string> = { "content-type": "application/json" };
-  if (environment !== "production" && process.env.WORLD_STAGING_TOKEN) {
+  if (environment === "staging" && process.env.WORLD_STAGING_TOKEN) {
     headers["x-staging-verification-token"] = process.env.WORLD_STAGING_TOKEN;
   }
 

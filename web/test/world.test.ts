@@ -6,6 +6,8 @@ import { parseNullifier, Rejection, rpContext, verifyProof, type IDKitResult } f
 
 const BUYER = "0xF0E135c4c36Ba36429E00a3680E64fA440Ec65fD";
 const OTHER = "0xe8099d0E4e16be5901723025F711631526d2ff05";
+// A World ID environment that isn't the configured one.
+const OTHER_ENV = process.env.WORLD_ENVIRONMENT === "staging" ? "sandbox" : "staging";
 
 function proofFor(wallet: string, overrides: Partial<IDKitResult> = {}): IDKitResult {
   return {
@@ -50,7 +52,7 @@ test("nullifiers compare as numbers, so leading zeros can't double-spend", () =>
 for (const [name, result, code] of [
   ["not a 4.0 proof", proofFor(BUYER, { protocol_version: "3.0" }), "unsupported_proof"],
   ["another action", proofFor(BUYER, { action: "some-other-drop" }), "wrong_action"],
-  ["another environment", proofFor(BUYER, { environment: "sandbox" }), "wrong_environment"],
+  ["another environment", proofFor(BUYER, { environment: OTHER_ENV }), "wrong_environment"],
   ["no responses", proofFor(BUYER, { responses: [] }), "missing_proof"],
   ["made for another wallet", proofFor(OTHER), "signal_mismatch"],
   ["no signal at all", proofFor(BUYER, { responses: [{ identifier: "proof_of_human" }] }), "signal_mismatch"],
@@ -93,11 +95,11 @@ test("valid proof: returns World's nullifier and calls our RP with only World's 
   ]);
 });
 
-test("staging calls carry the staging-window token; production calls never do", async () => {
+test("only staging calls carry the staging-window token; sandbox and production never do", async () => {
   const saved = { token: process.env.WORLD_STAGING_TOKEN, env: process.env.WORLD_ENVIRONMENT };
   process.env.WORLD_STAGING_TOKEN = "stg_test_token";
   try {
-    for (const environment of ["staging", "production"]) {
+    for (const environment of ["staging", "sandbox", "production"]) {
       process.env.WORLD_ENVIRONMENT = environment;
       const fetchMock = worldReplies(200, {
         success: true,
@@ -128,7 +130,7 @@ test("falls back to the per-result nullifier when World omits the top-level one"
 test("trusts World's environment over the client's claim", async () => {
   worldReplies(200, {
     success: true,
-    environment: "sandbox",
+    environment: OTHER_ENV,
     nullifier: "0x1",
     results: [{ identifier: "proof_of_human", success: true }],
   });

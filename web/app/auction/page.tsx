@@ -32,7 +32,7 @@ import { PhaseTrack } from "@/components/phase-track";
 
 const APP_ID = process.env.NEXT_PUBLIC_WORLD_APP_ID as `app_${string}`;
 const ACTION = process.env.NEXT_PUBLIC_WORLD_ACTION as string;
-const ENVIRONMENT = process.env.NEXT_PUBLIC_WORLD_ENVIRONMENT as "production" | "staging";
+const ENVIRONMENT = process.env.NEXT_PUBLIC_WORLD_ENVIRONMENT as "production" | "staging" | "sandbox";
 const TEST_BUYS = process.env.NEXT_PUBLIC_TEST_BUYS === "true";
 
 type Signed = { voucher: { dropId: Hex; buyer: Hex; nullifierHash: string; deadline: string }; signature: Hex };

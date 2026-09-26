@@ -108,6 +108,13 @@ below — mostly items 1–5, which are documentation gaps rather than code. (It
     friction is that a breaking change landed silently during an event full of staging integrations,
     and the fix is reachable only through MCP. Took about 30 minutes: find the source, add the
     header, script the window (`web/scripts/open-staging-window.mjs`).
+13. **Then the simulator had a bug, and we moved to sandbox.** On Sat evening we hit a bug in the
+    staging simulator, so we switched to the sandbox environment: `environment: "sandbox"` in
+    IDKit, the World ID (Sandbox) app on the phone, and proofs verified at the same production
+    endpoint with no staging token. The switch was one
+    environment variable plus a type widening (IDKit 4.3 already accepts `"sandbox"`), because the
+    backend pins whatever environment is configured rather than hard-coding staging. The staging
+    token is now sent only for `staging`.
 
 ## Confirmed by testing
 

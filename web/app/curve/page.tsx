@@ -25,7 +25,7 @@ const YEN_FOR_BASE_PRICE = 3000;
 
 const APP_ID = process.env.NEXT_PUBLIC_WORLD_APP_ID as `app_${string}`;
 const ACTION = process.env.NEXT_PUBLIC_WORLD_ACTION as string;
-const ENVIRONMENT = process.env.NEXT_PUBLIC_WORLD_ENVIRONMENT as "production" | "staging";
+const ENVIRONMENT = process.env.NEXT_PUBLIC_WORLD_ENVIRONMENT as "production" | "staging" | "sandbox";
 // The server decides whether test mode exists at all (never in production); see api/test-voucher.
 const TEST_BUYS = process.env.NEXT_PUBLIC_TEST_BUYS === "true";
 
@@ -305,7 +305,7 @@ export default function DropPage() {
     <main className="mx-auto w-full max-w-5xl px-5 py-8">
       <header className="mb-8 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-4">
-          <Link href="/" className="text-lg font-semibold tracking-tight">Fair Drop</Link>
+          <Link href="/" className="text-lg font-semibold tracking-tight">Fanfare</Link>
           <nav className="flex gap-1 text-sm">
             <Link href="/auction" className="rounded-full px-3 py-1" style={{ color: "var(--text-secondary)" }}>Auction</Link>
             <span className="rounded-full px-3 py-1 font-medium" style={{ background: "color-mix(in srgb, var(--series-1) 12%, transparent)", color: "var(--series-1)" }}>Curve drop</span>

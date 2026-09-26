@@ -1,4 +1,4 @@
-# SPEC — fair-drop (working name)
+# SPEC — Fanfare (formerly fair-drop)
 
 ETHGlobal Tokyo 2026 hackathon project. Solo builder, 36 hours.
 **Submission deadline: Sunday Sep 27, 2026, 09:00 JST.**

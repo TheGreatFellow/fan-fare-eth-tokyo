@@ -10,7 +10,7 @@ const anton = Anton({ variable: "--font-anton", subsets: ["latin"], weight: "400
 const notoSerifJp = Noto_Serif_JP({ variable: "--font-noto-serif-jp", weight: "900", preload: false });
 
 export const metadata: Metadata = {
-  title: "Fair Drop: Proof-of-Fan Clearing",
+  title: "Fanfare: the fair fare for fans",
   description:
     "Limited drops where fans get 定価, everyone else pays one fair market price, and scalpers have nothing left to take. One verified human, one sealed bid.",
 };
